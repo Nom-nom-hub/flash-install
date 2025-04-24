@@ -38,14 +38,14 @@
   },
   "dependencies": {
     "@yarnpkg/lockfile": "^1.1.0",
-    "archiver": "^7.0.1",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
+    "archiver": "^5.3.1",
+    "chalk": "^5.2.0",
+    "commander": "^10.0.1",
     "decompress": "^4.2.1",
-    "fs-extra": "^11.3.0",
-    "ini": "^5.0.0",
-    "jsonc-parser": "^3.3.1",
-    "tar-stream": "^3.1.7",
+    "fs-extra": "^11.1.1",
+    "ini": "^4.1.1",
+    "jsonc-parser": "^3.2.0",
+    "tar-stream": "^3.1.6",
     "toml": "^3.0.0"
   },
   "devDependencies": {

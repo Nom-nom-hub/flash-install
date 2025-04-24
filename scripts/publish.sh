@@ -28,7 +28,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Get the current version
-VERSION=$(node -p "require('./package.json').version")
+VERSION=$(node -e "import('fs').then(fs => fs.promises.readFile('./package.json', 'utf8').then(data => console.log(JSON.parse(data).version)))")
 echo "Current version: $VERSION"
 
 # Ask for confirmation
