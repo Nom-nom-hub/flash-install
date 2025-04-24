@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "express": "^4.18.2",
+    "lodash": "^4.17.21"
+  },
+  "timestamp": 1745516602701,
+  "format": "tar.gz"
+}

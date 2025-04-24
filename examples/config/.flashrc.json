@@ -1,0 +1,21 @@
+{
+  "cache": {
+    "maxAge": 30,
+    "maxSize": "10GB",
+    "compressionLevel": 6
+  },
+  "snapshot": {
+    "format": "tar.gz",
+    "compressionLevel": 6,
+    "includeDevDependencies": true
+  },
+  "install": {
+    "concurrency": 4,
+    "skipPostinstall": false,
+    "useCache": true
+  },
+  "plugins": {
+    "enabled": true,
+    "allowedPlugins": ["typescript-plugin", "security-scanner"]
+  }
+}

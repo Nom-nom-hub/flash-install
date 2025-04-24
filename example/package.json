@@ -1,0 +1,16 @@
+{
+  "name": "flash-install-example",
+  "version": "1.0.0",
+  "description": "Example project for testing flash-install",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Success!\" && exit 0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0"
+  }
+}

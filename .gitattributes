@@ -1,0 +1,40 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Explicitly declare text files to be normalized
+*.ts text
+*.js text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.html text
+*.css text
+*.scss text
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Declare binary files to prevent normalization
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+*.gz binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+
+# Treat package-lock.json and yarn.lock as binary to avoid merge conflicts
+package-lock.json binary
+yarn.lock binary
+pnpm-lock.yaml binary
+
+# Exclude from language statistics
+examples/* linguist-documentation
+docs/* linguist-documentation

@@ -1,0 +1,30 @@
+{
+  "cache": {
+    "maxAge": 30,
+    "maxSize": "20GB",
+    "compressionLevel": 6
+  },
+  "snapshot": {
+    "format": "tar.gz",
+    "compressionLevel": 6,
+    "includeDevDependencies": true
+  },
+  "install": {
+    "concurrency": 8,
+    "skipPostinstall": false,
+    "useCache": true
+  },
+  "workspaces": {
+    "enabled": true,
+    "packages": [
+      "packages/*",
+      "apps/*"
+    ],
+    "hoistDependencies": true,
+    "parallelInstall": true
+  },
+  "plugins": {
+    "enabled": true,
+    "allowedPlugins": ["typescript-plugin", "security-scanner", "license-checker"]
+  }
+}
