@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "flash-install": "dist/cli.js"
+    "flash-install": "dist/cli.js",
+    "flash": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -17,13 +18,23 @@
     "lint": "echo \"Linting passed\" && exit 0",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "postinstall": "node scripts/postinstall.js",
+    "publish-package": "./scripts/publish.sh"
   },
   "keywords": ["npm", "install", "cache", "fast", "dependencies", "package manager"],
-  "author": "",
+  "author": "Flash Install Team",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nom-nom-hub/flash-install.git"
+  },
+  "homepage": "https://github.com/Nom-nom-hub/flash-install",
+  "bugs": {
+    "url": "https://github.com/Nom-nom-hub/flash-install/issues"
   },
   "dependencies": {
     "@yarnpkg/lockfile": "^1.1.0",

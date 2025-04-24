@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="flash-install logo" width="200" height="200">
+  <img src="https://raw.githubusercontent.com/Nom-nom-hub/flash-install/main/assets/logo.png" alt="flash-install logo" width="200" height="200">
 </p>
 
 <h1 align="center">⚡ flash-install</h1>
@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg)](https://nodejs.org/)
 [![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg)](https://www.npmjs.com/package/flash-install)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/yourusername/flash-install/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Nom-nom-hub/flash-install/pulls)
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
 
@@ -221,11 +221,28 @@ Plugins can be used for tasks like:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the repository
+1. Fork the repository at https://github.com/Nom-nom-hub/flash-install
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+5. Open a Pull Request at https://github.com/Nom-nom-hub/flash-install/pulls
+
+## Publishing
+
+To publish a new version of flash-install to npm:
+
+### Method 1: Using the npm script
+
+1. Update the version in package.json
+2. Login to npm: `npm login`
+3. Run the publish script: `npm run publish-package`
+
+### Method 2: Manual publishing
+
+1. Update the version in package.json
+2. Build the project: `npm run build`
+3. Login to npm: `npm login`
+4. Publish the package: `npm publish`
 
 ## License
 
