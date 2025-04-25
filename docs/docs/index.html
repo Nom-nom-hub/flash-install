@@ -10,14 +10,16 @@
     <title>flash-install - Blazingly Fast Package Installation</title>
     <style>
         :root {
-            --primary-color: #0078ff;
-            --secondary-color: #ffcc00;
-            --accent-color: #ff6b6b;
-            --background-color: #f8f9fa;
-            --card-background: #ffffff;
-            --text-color: #333333;
-            --text-light: #6c757d;
-            --border-color: #e9ecef;
+            --primary-color: #ffcc00; /* Yellow from logo */
+            --secondary-color: #4caf50; /* Green from logo */
+            --accent-color: #ffffff; /* White */
+            --background-color: #121212; /* Dark background */
+            --card-background: #1e1e1e; /* Slightly lighter dark */
+            --text-color: #e0e0e0; /* Light text */
+            --text-light: #aaaaaa; /* Lighter text */
+            --border-color: #333333; /* Dark borders */
+            --header-gradient-start: #ffcc00; /* Yellow */
+            --header-gradient-end: #4caf50; /* Green */
         }
 
         body {
@@ -25,6 +27,10 @@
             line-height: 1.6;
             color: var(--text-color);
             background-color: var(--background-color);
+            background-image:
+                radial-gradient(circle at 25px 25px, rgba(255, 204, 0, 0.15) 2px, transparent 0),
+                radial-gradient(circle at 75px 75px, rgba(76, 175, 80, 0.15) 2px, transparent 0);
+            background-size: 100px 100px;
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
@@ -32,11 +38,27 @@
         .header {
             text-align: center;
             padding: 40px 0;
-            background: linear-gradient(135deg, var(--primary-color), #005bb5);
+            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
             border-radius: 12px;
             margin-bottom: 40px;
-            box-shadow: 0 4px 20px rgba(0, 120, 255, 0.2);
-            color: white;
+            box-shadow: 0 4px 20px rgba(255, 204, 0, 0.3);
+            color: #121212; /* Dark text on light background */
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 70%);
+            z-index: 1;
+        }
+        .header > * {
+            position: relative;
+            z-index: 2;
         }
         .logo {
             text-align: center;
@@ -80,13 +102,28 @@
             padding: 25px;
             background-color: var(--card-background);
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+            position: relative;
+            overflow: hidden;
+        }
+        .feature::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 30px 30px 0;
+            border-color: transparent var(--primary-color) transparent transparent;
+            transition: border-color 0.3s ease;
         }
         .feature:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            background-color: #252525;
         }
         .feature h3 {
             color: var(--primary-color);
@@ -101,19 +138,34 @@
             margin-bottom: 0;
         }
         .feature:nth-child(2) {
-            border-top-color: var(--secondary-color);
+            border-left-color: var(--secondary-color);
+        }
+        .feature:nth-child(2)::after {
+            border-color: transparent var(--secondary-color) transparent transparent;
         }
         .feature:nth-child(3) {
-            border-top-color: var(--accent-color);
+            border-left-color: var(--accent-color);
+        }
+        .feature:nth-child(3)::after {
+            border-color: transparent var(--accent-color) transparent transparent;
         }
         .feature:nth-child(4) {
-            border-top-color: #4CAF50;
+            border-left-color: var(--secondary-color);
+        }
+        .feature:nth-child(4)::after {
+            border-color: transparent var(--secondary-color) transparent transparent;
         }
         .feature:nth-child(5) {
-            border-top-color: #9C27B0;
+            border-left-color: var(--primary-color);
+        }
+        .feature:nth-child(5)::after {
+            border-color: transparent var(--primary-color) transparent transparent;
         }
         .feature:nth-child(6) {
-            border-top-color: #FF9800;
+            border-left-color: var(--accent-color);
+        }
+        .feature:nth-child(6)::after {
+            border-color: transparent var(--accent-color) transparent transparent;
         }
         @media (max-width: 900px) {
             .feature {
@@ -128,40 +180,56 @@
         .button {
             display: inline-block;
             background-color: var(--primary-color);
-            color: white;
+            color: #121212;
             padding: 12px 24px;
             border-radius: 50px;
             text-decoration: none;
             font-weight: bold;
             margin: 10px 8px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 120, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: width 0.3s ease;
+            z-index: -1;
         }
         .button:hover {
-            background-color: #0056b3;
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 120, 255, 0.3);
+            box-shadow: 0 6px 16px rgba(255, 204, 0, 0.4);
+        }
+        .button:hover::before {
+            width: 100%;
         }
         .button.secondary {
             background-color: var(--secondary-color);
-            color: var(--text-color);
-            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.2);
+            color: #121212;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .button.secondary:hover {
-            background-color: #e6b800;
-            box-shadow: 0 6px 16px rgba(255, 204, 0, 0.3);
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
         }
         .center {
             text-align: center;
         }
         pre {
-            background-color: #1e1e1e;
+            background-color: #0a0a0a;
             border-radius: 8px;
             padding: 20px;
             overflow: auto;
             color: #e6e6e6;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             margin: 25px 0;
+            border-left: 4px solid var(--primary-color);
         }
         code {
             font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
@@ -170,21 +238,28 @@
         .code-comment {
             color: #6A9955;
         }
+        code .string {
+            color: var(--primary-color);
+        }
+        code .keyword {
+            color: var(--secondary-color);
+        }
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 30px 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             border-radius: 10px;
             overflow: hidden;
+            background-color: var(--card-background);
         }
         th, td {
             padding: 12px 16px;
             text-align: left;
         }
         th {
-            background-color: var(--primary-color);
-            color: white;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: #121212;
             font-weight: 600;
         }
         td {
@@ -194,14 +269,20 @@
             border-bottom: none;
         }
         tr:nth-child(even) {
-            background-color: rgba(0, 0, 0, 0.02);
+            background-color: rgba(255, 255, 255, 0.03);
         }
         tr:hover {
-            background-color: rgba(0, 120, 255, 0.05);
+            background-color: rgba(255, 204, 0, 0.1);
         }
         .speedup {
             font-weight: bold;
             color: var(--primary-color);
+            position: relative;
+        }
+        .speedup::after {
+            content: '⚡';
+            margin-left: 5px;
+            font-size: 0.8em;
         }
 
         /* Section styling */
@@ -213,16 +294,22 @@
             color: var(--primary-color);
             margin-bottom: 30px;
             padding-bottom: 10px;
+            display: inline-block;
         }
         .section-title::after {
             content: '';
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 60px;
+            width: 100%;
             height: 4px;
-            background-color: var(--primary-color);
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
             border-radius: 2px;
+        }
+        .section-title::before {
+            content: '⚡';
+            margin-right: 10px;
+            color: var(--primary-color);
         }
 
         /* List styling */
@@ -230,8 +317,9 @@
             padding-left: 20px;
         }
         ul li {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             position: relative;
+            padding-left: 10px;
         }
         ul li::before {
             content: '⚡';
@@ -239,14 +327,40 @@
             left: -20px;
             color: var(--primary-color);
         }
+        ul li strong {
+            color: var(--primary-color);
+        }
 
         /* Footer styling */
         .footer {
             margin-top: 60px;
-            padding-top: 30px;
+            padding: 30px 0;
             border-top: 1px solid var(--border-color);
             text-align: center;
             color: var(--text-light);
+            background: linear-gradient(to bottom, transparent, rgba(255, 204, 0, 0.05));
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* Glow effects */
+        .glow {
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--background-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
         }
     </style>
 </head>
@@ -256,7 +370,7 @@
             <img src="assets/logo.png" alt="flash-install logo">
         </div>
 
-        <h1>⚡ flash-install</h1>
+        <h1 class="glow">⚡ flash-install</h1>
         <p class="tagline">Blazingly fast package installation for Node.js</p>
 
         <div>
@@ -393,22 +507,49 @@ flash-install clean-snapshot</code></pre>
     </div>
 
     <div class="footer">
+        <div class="logo" style="margin-bottom: 20px;">
+            <img src="assets/logo.png" alt="flash-install logo" style="max-width: 80px;">
+        </div>
         <p>Copyright &copy; 2023 flash-install. Distributed under an MIT license.</p>
-        <p>Made with ⚡ for the JavaScript community</p>
+        <p>Made with <span class="glow">⚡</span> for the JavaScript community</p>
     </div>
 
     <script>
-        // Add a simple animation to the logo
+        // Add animations and effects
         document.addEventListener('DOMContentLoaded', function() {
-            const logo = document.querySelector('.logo img');
+            // Logo pulse animation
+            const logo = document.querySelector('.header .logo img');
 
-            // Add a subtle pulse animation
             setInterval(() => {
                 logo.style.transform = 'scale(1.05)';
                 setTimeout(() => {
                     logo.style.transform = 'scale(1)';
                 }, 500);
             }, 3000);
+
+            // Add fade-in animation to features
+            const features = document.querySelectorAll('.feature');
+            features.forEach((feature, index) => {
+                feature.style.opacity = '0';
+                feature.style.transform = 'translateY(20px)';
+                feature.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+
+                setTimeout(() => {
+                    feature.style.opacity = '1';
+                    feature.style.transform = 'translateY(0)';
+                }, 300 + (index * 100));
+            });
+
+            // Add glow effect to speedup numbers on hover
+            const speedups = document.querySelectorAll('.speedup');
+            speedups.forEach(speedup => {
+                speedup.addEventListener('mouseover', () => {
+                    speedup.classList.add('glow');
+                });
+                speedup.addEventListener('mouseout', () => {
+                    speedup.classList.remove('glow');
+                });
+            });
         });
     </script>
 </body>
