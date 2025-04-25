@@ -1,12 +1,13 @@
 {
-  "name": "flash-install",
-  "version": "1.0.0",
+  "name": "@flash-install/cli",
+  "version": "1.3.4",
   "description": "A fast, drop-in replacement for npm install with deterministic caching",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "flash-install": "dist/cli.js",
-    "flash": "dist/cli.js"
+    "flash": "dist/cli.js",
+    "flash-direct": "dist/cli-direct.js"
   },
   "scripts": {
     "build": "tsc",
@@ -36,6 +37,15 @@
   "bugs": {
     "url": "https://github.com/Nom-nom-hub/flash-install/issues"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/**/*",
+    "scripts/postinstall.js",
+    "LICENSE",
+    "README.md"
+  ],
   "dependencies": {
     "@yarnpkg/lockfile": "^1.1.0",
     "archiver": "^5.3.1",

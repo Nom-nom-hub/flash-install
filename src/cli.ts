@@ -110,7 +110,49 @@ program
 
     // Install dependencies
     logger.flash(`Installing dependencies in ${chalk.bold(projectDir)}`);
-    const success = await customInstaller.install(projectDir);
+
+    // Always use direct mode for better progress reporting
+    // Start timer
+    const startTime = Date.now();
+
+    // Use direct npm install for better progress reporting
+    const { spawn } = await import('child_process');
+
+    // Start npm install process with all output passed through
+    const npmProcess = spawn(packageManager, ['install'], {
+      stdio: ['inherit', 'inherit', 'inherit'],
+      cwd: projectDir
+    });
+
+    // Handle completion
+    const success = await new Promise<boolean>((resolve) => {
+      npmProcess.on('close', (code) => {
+        if (code === 0) {
+          // Calculate elapsed time
+          const elapsed = (Date.now() - startTime) / 1000;
+          let elapsedText = '';
+          if (elapsed < 60) {
+            elapsedText = `${Math.round(elapsed)}s`;
+          } else {
+            elapsedText = `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`;
+          }
+
+          // Show success message
+          console.log(chalk.green(`\n✓ Installation completed in ${chalk.bold(elapsedText)}`));
+          console.log(chalk.cyan(`⚡ flash-install: Faster dependency installation with snapshot caching`));
+          resolve(true);
+        } else {
+          // Show error message
+          console.error(chalk.red(`\n✗ Installation failed with code ${code}`));
+          resolve(false);
+        }
+      });
+
+      npmProcess.on('error', (error) => {
+        console.error(chalk.red(`\n✗ Error: ${error.message}`));
+        resolve(false);
+      });
+    });
 
     if (!success) {
       process.exit(1);
@@ -125,6 +167,7 @@ program
   .option('-f, --format <format>', 'Snapshot format (zip, tar, tar.gz)', 'tar.gz')
   .option('-c, --compression <level>', 'Compression level (0-9)', '6')
   .option('-o, --output <path>', 'Output path for snapshot')
+  .option('-t, --cache-timeout <seconds>', 'Timeout for cache operation in seconds', '30')
   .action(async (dir, options) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);

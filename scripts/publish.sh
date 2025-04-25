@@ -46,7 +46,7 @@ npm publish
 # Check if publish was successful
 if [ $? -eq 0 ]; then
   echo "Successfully published version $VERSION to npm!"
-  echo "You can install it with: npm install -g flash-install"
+  echo "You can install it with: npm install -g @flash-install/cli"
 else
   echo "Failed to publish to npm. Please check the error message above."
   exit 1

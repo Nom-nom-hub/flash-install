@@ -7,7 +7,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg)](https://nodejs.org/)
-[![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg)](https://www.npmjs.com/package/flash-install)
+[![npm version](https://img.shields.io/badge/npm-v1.3.4-blue.svg)](https://www.npmjs.com/package/@flash-install/cli)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Nom-nom-hub/flash-install/pulls)
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
@@ -28,7 +28,7 @@ A fast, drop-in replacement for `npm install`, focused on drastically speeding u
 ## Installation
 
 ```bash
-npm install -g flash-install
+npm install -g @flash-install/cli
 ```
 
 ## Usage
@@ -38,7 +38,11 @@ npm install -g flash-install
 Replace your regular `npm install` command with `flash-install`:
 
 ```bash
+# Standard installation
 flash-install
+
+# Or use direct mode for better progress reporting
+flash-direct
 ```
 
 ### Creating a Snapshot
@@ -47,6 +51,12 @@ Create a `.flashpack` snapshot of your `node_modules` directory:
 
 ```bash
 flash-install snapshot
+
+# Skip adding to global cache
+flash-install snapshot --no-cache
+
+# Set a custom timeout for the cache operation (in seconds)
+flash-install snapshot --cache-timeout 10
 ```
 
 ### Restoring from a Snapshot
@@ -59,11 +69,35 @@ flash-install restore
 
 ### Cleaning
 
-Remove `node_modules` and local `.flashpack` file:
+#### Clean Everything
+
+Remove both `node_modules` and local `.flashpack` file:
 
 ```bash
 flash-install clean
 ```
+
+**Note:** The clean command removes both the node_modules directory and the snapshot file. You'll need to create a new snapshot after cleaning if you want to use the restore command later.
+
+#### Clean Only Node Modules
+
+Remove only the `node_modules` directory (preserves snapshot):
+
+```bash
+flash-install clean-modules
+```
+
+This is useful when you want to free up disk space but keep the snapshot for quick restoration later.
+
+#### Clean Only Snapshot
+
+Remove only the snapshot file (preserves node_modules):
+
+```bash
+flash-install clean-snapshot
+```
+
+This is useful when you want to create a fresh snapshot without removing your installed dependencies.
 
 Clean the global cache:
 

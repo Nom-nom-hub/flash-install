@@ -14,8 +14,13 @@ import { snapshot } from './snapshot.js';
 import { WorkerPool, createWorkerFunction } from './utils/worker-pool.js';
 import { Timer, createTimer } from './utils/timer.js';
 import { ProgressIndicator, Spinner } from './utils/progress.js';
+import { ReliableProgress } from './utils/reliable-progress.js';
 import { pluginManager, PluginHook } from './plugin.js';
 import { verifyPackageIntegrity } from './utils/integrity.js';
+import chalk from 'chalk';
+// Import version from package.json
+const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const version = packageJson.version;
 
 /**
  * Package manager types
@@ -318,13 +323,23 @@ export class Installer {
       // Start overall timer
       const totalTimer = createTimer();
 
+      // Print banner
+      console.log(chalk.cyan(`
+⚡ flash-install v${version}
+      `));
+
+      console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
+
       // Detect package manager if not specified
       if (!this.options.packageManager) {
         this.options.packageManager = this.detectPackageManager(projectDir);
       }
 
+      console.log(chalk.gray(`→ Using package manager: ${this.options.packageManager}`));
+
       // Parse package.json
       const parseTimer = createTimer();
+      console.log(chalk.gray(`→ Parsing package.json...`));
       const pkg = await this.parsePackageJson(projectDir);
       logger.debug(`Parsed package.json in ${parseTimer.getElapsedFormatted()}`);
 
@@ -332,11 +347,12 @@ export class Installer {
       let dependencies: Record<string, string>;
       const lockfileTimer = createTimer();
       try {
+        console.log(chalk.gray(`→ Parsing lockfile...`));
         dependencies = await this.parseLockfile(projectDir, this.options.packageManager);
         logger.debug(`Parsed lockfile in ${lockfileTimer.getElapsedFormatted()}`);
       } catch (error) {
-        logger.warn(`Failed to parse lockfile: ${error}`);
-        logger.warn('Falling back to package.json dependencies');
+        console.log(chalk.yellow(`⚠ Failed to parse lockfile: ${error}`));
+        console.log(chalk.yellow(`⚠ Falling back to package.json dependencies`));
         dependencies = { ...pkg.dependencies };
 
         if (this.options.includeDevDependencies) {
@@ -346,7 +362,7 @@ export class Installer {
 
       // Log dependency count
       const depCount = Object.keys(dependencies).length;
-      logger.info(`Found ${depCount} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`);
+      console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`));
 
       // Create plugin context
       const nodeModulesPath = path.join(projectDir, 'node_modules');
@@ -362,34 +378,32 @@ export class Installer {
 
       // Check if we have a valid snapshot
       const snapshotCheckTimer = createTimer();
+      console.log(chalk.gray(`→ Checking for valid snapshot...`));
       const hasValidSnapshot = await snapshot.isValid(projectDir, dependencies);
       logger.debug(`Checked snapshot validity in ${snapshotCheckTimer.getElapsedFormatted()}`);
 
       if (hasValidSnapshot) {
-        logger.info('Valid .flashpack snapshot found, restoring from snapshot...');
+        console.log(chalk.green(`✓ Valid .flashpack snapshot found, restoring from snapshot...`));
 
         // Run pre-restore hooks
         await pluginManager.runHook(PluginHook.PRE_RESTORE, pluginContext);
 
         const restoreTimer = createTimer();
-        const spinner = new Spinner('Restoring from snapshot');
-        spinner.start();
 
         const success = await snapshot.restore(projectDir);
 
-        spinner.stop();
         if (success) {
           // Run post-restore hooks
           await pluginManager.runHook(PluginHook.POST_RESTORE, pluginContext);
 
-          logger.success(`Restored from snapshot in ${restoreTimer.getElapsedFormatted()}`);
-          logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
+          console.log(chalk.green(`✓ Restored from snapshot in ${chalk.bold(restoreTimer.getElapsedFormatted())}`));
+          console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
 
           // Compare with estimated npm install time
           const estimatedNpmTime = depCount * 0.5; // rough estimate: 0.5s per dependency
           const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
           if (speedup > 1) {
-            logger.flash(`⚡ ${speedup.toFixed(1)}x faster than npm install`);
+            console.log(chalk.cyan(`⚡ ${speedup.toFixed(1)}x faster than npm install`));
           }
 
           // Run post-install hooks
@@ -402,27 +416,37 @@ export class Installer {
       // Check if we have the dependency tree in cache
       if (this.options.useCache) {
         const cacheCheckTimer = createTimer();
+        console.log(chalk.gray(`→ Checking cache for dependency tree...`));
         const hasCachedTree = await cache.hasDependencyTree(dependencies);
         logger.debug(`Checked cache in ${cacheCheckTimer.getElapsedFormatted()}`);
 
         if (hasCachedTree) {
-          logger.info('Dependency tree found in cache, restoring...');
+          console.log(chalk.green(`✓ Dependency tree found in cache, restoring...`));
           const restoreTimer = createTimer();
-          const spinner = new Spinner('Restoring from cache');
-          spinner.start();
+
+          // Show progress during cache restoration
+          let lastProgress = 0;
+          const progressInterval = setInterval(() => {
+            lastProgress += 5;
+            if (lastProgress <= 100) {
+              process.stdout.write(`\r${chalk.gray(`→ Restoring from cache... ${lastProgress}%`)}`);
+            }
+          }, 100);
 
           const success = await cache.restoreDependencyTree(dependencies, nodeModulesPath);
 
-          spinner.stop();
+          clearInterval(progressInterval);
+          process.stdout.write(`\r${chalk.gray(`→ Restoring from cache... 100%`)}\n`);
+
           if (success) {
-            logger.success(`Restored from cache in ${restoreTimer.getElapsedFormatted()}`);
-            logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
+            console.log(chalk.green(`✓ Restored from cache in ${chalk.bold(restoreTimer.getElapsedFormatted())}`));
+            console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
 
             // Compare with estimated npm install time
             const estimatedNpmTime = depCount * 0.5; // rough estimate: 0.5s per dependency
             const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
             if (speedup > 1) {
-              logger.flash(`⚡ ${speedup.toFixed(1)}x faster than npm install`);
+              console.log(chalk.cyan(`⚡ ${speedup.toFixed(1)}x faster than npm install`));
             }
 
             // Run post-install hooks
@@ -430,30 +454,50 @@ export class Installer {
           }
 
           return success;
+        } else {
+          console.log(chalk.gray(`→ No cache hit found for current dependencies`));
         }
       }
 
       // If offline mode is enabled and we don't have a cache hit, fail
       if (this.options.offline) {
-        logger.error('Offline mode is enabled but dependencies are not in cache');
+        console.log(chalk.red(`✗ Offline mode is enabled but dependencies are not in cache`));
         return false;
       }
 
       // Install dependencies using package manager
-      logger.info(`Installing dependencies using ${this.options.packageManager}...`);
+      console.log(chalk.cyan(`→ Installing dependencies using ${chalk.bold(this.options.packageManager)}...`));
 
       const installTimer = createTimer();
       let success = false;
 
-      if (this.workerPool && this.options.concurrency > 1) {
-        // Parallel installation using worker threads
-        success = await this.installParallel(projectDir, dependencies);
-      } else {
-        // Sequential installation using package manager
-        success = await this.installSequential(projectDir);
+      // Add a simple progress indicator that updates every second
+      const progressInterval = setInterval(() => {
+        const elapsed = installTimer.getElapsedSeconds();
+        const dots = '.'.repeat(Math.floor(elapsed) % 4);
+        const spaces = ' '.repeat(3 - dots.length);
+        process.stdout.write(`\r${chalk.cyan('→')} Installing packages${dots}${spaces}`);
+      }, 250);
+
+      try {
+        if (this.workerPool && this.options.concurrency > 1) {
+          // Parallel installation using worker threads
+          console.log(chalk.gray(`\n→ Using parallel installation with ${this.options.concurrency} workers`));
+          success = await this.installParallel(projectDir, dependencies);
+        } else {
+          // Sequential installation using package manager
+          console.log(chalk.gray(`\n→ Using sequential installation`));
+          success = await this.installSequential(projectDir);
+        }
+      } finally {
+        // Always clear the interval
+        clearInterval(progressInterval);
+        // Clear the progress line
+        process.stdout.write('\r                                \r');
       }
 
       if (!success) {
+        console.log(chalk.red(`✗ Installation failed`));
         return false;
       }
 
@@ -674,43 +718,64 @@ export class Installer {
 
     // Execute tasks in parallel with progress tracking
     const totalPackages = tasks.length;
-    logger.info(`Installing ${totalPackages} packages in parallel...`);
+    console.log(chalk.cyan(`→ Installing ${chalk.bold(totalPackages.toString())} packages in parallel...`));
 
-    // Create progress bar
-    const progress = new ProgressIndicator(
-      totalPackages,
-      'Installing packages:'
-    );
+    // Create reliable progress reporter
+    const progress = new ReliableProgress('Installing packages');
+    progress.start();
 
     // Track installed packages
     let installed = 0;
     let failed = 0;
+    let lastPackage = '';
 
     // Process in batches
     const batchSize = this.options.concurrency;
+
+    // Add immediate feedback
+    logger.info(`Starting installation in batches of ${batchSize} packages`);
+
     for (let i = 0; i < tasks.length; i += batchSize) {
       const batch = tasks.slice(i, i + batchSize);
 
       // Update progress with current batch info
       const currentBatch = Math.floor(i / batchSize) + 1;
       const totalBatches = Math.ceil(tasks.length / batchSize);
-      progress.update(0); // Force render
+
+      // Log batch start for immediate feedback
+      console.log(chalk.cyan(`→ Processing batch ${currentBatch}/${totalBatches} (${batch.length} packages)`));
+
+      // Show which packages are in this batch
+      const packageNames = batch.map(t => `${chalk.green(t.name)}@${chalk.yellow(t.version)}`).join(', ');
+      console.log(chalk.gray(`  Packages: ${packageNames}`));
+
+      // Update progress status
+      progress.updateStatus(`Batch ${currentBatch}/${totalBatches}`)
 
       // Execute batch
       const batchResults = await Promise.all(
         batch.map(async (task) => {
           try {
+            // Update progress with current package
+            lastPackage = `${task.name}@${task.version}`;
+            progress.updateStatus(`Installing ${chalk.green(lastPackage)} (${installed}/${totalPackages})`);
+
             const result = await this.workerPool!.execute(task);
+
             if (result) {
               installed++;
+              // Log success
+              console.log(chalk.green(`✓ Installed ${chalk.bold(task.name)}@${chalk.bold(task.version)} (${installed}/${totalPackages})`));
             } else {
               failed++;
+              // Log failure
+              console.log(chalk.red(`✗ Failed to install ${chalk.bold(task.name)}@${chalk.bold(task.version)}`));
             }
-            progress.update(1);
             return result;
           } catch (error) {
             failed++;
-            progress.update(1);
+            // Log error
+            console.log(chalk.red(`✗ Error installing ${chalk.bold(task.name)}@${chalk.bold(task.version)}: ${error}`));
             return false;
           }
         })
@@ -723,14 +788,14 @@ export class Installer {
     }
 
     // Complete progress
-    progress.complete();
+    progress.stop();
 
     // Log results
     if (failed === 0) {
-      logger.success(`All ${installed} packages installed successfully`);
+      progress.complete(`All ${installed} packages installed successfully`);
       return true;
     } else {
-      logger.error(`${failed} of ${totalPackages} packages failed to install`);
+      console.log(chalk.yellow(`⚠ ${failed} of ${totalPackages} packages failed to install`));
       return false;
     }
   }
