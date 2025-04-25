@@ -261,22 +261,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request at https://github.com/Nom-nom-hub/flash-install/pulls
 
-## Publishing
 
-To publish a new version of flash-install to npm:
-
-### Method 1: Using the npm script
-
-1. Update the version in package.json
-2. Login to npm: `npm login`
-3. Run the publish script: `npm run publish-package`
-
-### Method 2: Manual publishing
-
-1. Update the version in package.json
-2. Build the project: `npm run build`
-3. Login to npm: `npm login`
-4. Publish the package: `npm publish`
 
 ## License
 
