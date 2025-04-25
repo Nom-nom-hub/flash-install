@@ -1,0 +1,43 @@
+title: flash-install
+description: Blazingly fast package installation for Node.js
+baseurl: "/flash-install"
+url: "https://nom-nom-hub.github.io"
+logo: /assets/logo.png
+github_username: Nom-nom-hub
+repository: Nom-nom-hub/flash-install
+
+# Theme settings
+remote_theme: pmarsceill/just-the-docs
+color_scheme: light
+
+# Enable search
+search_enabled: true
+
+# Aux links for the upper right navigation
+aux_links:
+  "flash-install on GitHub":
+    - "//github.com/Nom-nom-hub/flash-install"
+
+# Makes Aux links open in a new tab
+aux_links_new_tab: true
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+# Footer content
+footer_content: "Copyright &copy; 2023 flash-install. Distributed under an <a href=\"https://github.com/Nom-nom-hub/flash-install/blob/main/LICENSE\">MIT license.</a>"
+
+# Heading anchor links
+heading_anchors: true
+
+# Google Analytics
+ga_tracking: 
+ga_tracking_anonymize_ip: true
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
