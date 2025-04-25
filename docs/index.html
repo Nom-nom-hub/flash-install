@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>flash-install Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .logo {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .logo img {
+            max-width: 200px;
+        }
+        h1 {
+            text-align: center;
+            color: #0078ff;
+        }
+        h2 {
+            color: #0078ff;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+        .feature {
+            flex: 0 0 calc(33.333% - 20px);
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 768px) {
+            .feature {
+                flex: 0 0 calc(50% - 20px);
+            }
+        }
+        @media (max-width: 576px) {
+            .feature {
+                flex: 0 0 100%;
+            }
+        }
+        .button {
+            display: inline-block;
+            background-color: #0078ff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <img src="assets/logo.png" alt="flash-install logo">
+    </div>
+    
+    <h1>⚡ flash-install</h1>
+    <p class="center">Blazingly fast package installation for Node.js</p>
+    
+    <div class="center">
+        <a href="https://github.com/Nom-nom-hub/flash-install" class="button">GitHub</a>
+        <a href="https://www.npmjs.com/package/@flash-install/cli" class="button">npm</a>
+    </div>
+    
+    <h2>What is flash-install?</h2>
+    <p>flash-install is a fast, drop-in replacement for <code>npm install</code>, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and <code>.flashpack</code> archive snapshotting.</p>
+    
+    <div class="features">
+        <div class="feature">
+            <h3>⚡ Blazing Fast</h3>
+            <p>Installs dependencies from cache when available, avoiding network requests</p>
+        </div>
+        <div class="feature">
+            <h3>📦 Snapshot Support</h3>
+            <p>Creates and restores <code>.flashpack</code> archives for instant dependency restoration</p>
+        </div>
+        <div class="feature">
+            <h3>🔄 Parallel Operations</h3>
+            <p>Installs packages in parallel using Node.js worker threads</p>
+        </div>
+        <div class="feature">
+            <h3>🔒 Offline Mode</h3>
+            <p>Install dependencies without internet connection using cache or snapshots</p>
+        </div>
+        <div class="feature">
+            <h3>✅ Checksum Validation</h3>
+            <p>Verifies package integrity against npm registry checksums</p>
+        </div>
+        <div class="feature">
+            <h3>🔌 Plugin System</h3>
+            <p>Extensible architecture with lifecycle hooks</p>
+        </div>
+    </div>
+    
+    <h2>Installation</h2>
+    <pre><code>npm install -g @flash-install/cli</code></pre>
+    
+    <h2>Basic Usage</h2>
+    <pre><code># Standard installation
+flash-install
+
+# Create a snapshot
+flash-install snapshot
+
+# Restore from a snapshot
+flash-install restore
+
+# Clean up
+flash-install clean</code></pre>
+    
+    <h2>Documentation</h2>
+    <p>For full documentation, please visit the <a href="https://github.com/Nom-nom-hub/flash-install">GitHub repository</a>.</p>
+    
+    <div class="center">
+        <p>Copyright &copy; 2023 flash-install. Distributed under an MIT license.</p>
+    </div>
+</body>
+</html>
