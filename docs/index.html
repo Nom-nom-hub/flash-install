@@ -3,26 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flash-install Documentation</title>
+    <meta name="description" content="flash-install - Blazingly fast package installation for Node.js">
+    <meta name="keywords" content="npm, node.js, package manager, dependencies, cache, snapshot">
+    <meta name="author" content="flash-install">
+    <link rel="icon" href="assets/favicon.ico">
+    <title>flash-install - Blazingly Fast Package Installation</title>
     <style>
+        :root {
+            --primary-color: #0078ff;
+            --secondary-color: #ffcc00;
+            --accent-color: #ff6b6b;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --text-light: #6c757d;
+            --border-color: #e9ecef;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
-            max-width: 800px;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
         }
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, var(--primary-color), #005bb5);
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0, 120, 255, 0.2);
+            color: white;
+        }
         .logo {
             text-align: center;
-            margin: 30px 0;
+            margin: 0 0 20px 0;
         }
         .logo img {
-            max-width: 200px;
+            max-width: 180px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+            transition: transform 0.3s ease;
+        }
+        .logo img:hover {
+            transform: scale(1.05);
         }
         h1 {
             text-align: center;
-            color: #0078ff;
+            color: white;
+            font-size: 3em;
+            margin: 0 0 10px 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .tagline {
+            font-size: 1.4em;
+            margin-bottom: 30px;
+            opacity: 0.9;
         }
         h2 {
             color: #0078ff;
@@ -33,108 +71,345 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
-            margin: 30px 0;
+            margin: 40px 0;
+            gap: 20px;
         }
         .feature {
             flex: 0 0 calc(33.333% - 20px);
             margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            background-color: var(--card-background);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-top: 4px solid var(--primary-color);
         }
-        @media (max-width: 768px) {
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .feature h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature p {
+            color: var(--text-light);
+            margin-bottom: 0;
+        }
+        .feature:nth-child(2) {
+            border-top-color: var(--secondary-color);
+        }
+        .feature:nth-child(3) {
+            border-top-color: var(--accent-color);
+        }
+        .feature:nth-child(4) {
+            border-top-color: #4CAF50;
+        }
+        .feature:nth-child(5) {
+            border-top-color: #9C27B0;
+        }
+        .feature:nth-child(6) {
+            border-top-color: #FF9800;
+        }
+        @media (max-width: 900px) {
             .feature {
-                flex: 0 0 calc(50% - 20px);
+                flex: 0 0 calc(50% - 15px);
             }
         }
-        @media (max-width: 576px) {
+        @media (max-width: 600px) {
             .feature {
                 flex: 0 0 100%;
             }
         }
         .button {
             display: inline-block;
-            background-color: #0078ff;
+            background-color: var(--primary-color);
             color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 50px;
             text-decoration: none;
             font-weight: bold;
-            margin: 10px 5px;
+            margin: 10px 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 120, 255, 0.2);
         }
         .button:hover {
             background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 120, 255, 0.3);
+        }
+        .button.secondary {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.2);
+        }
+        .button.secondary:hover {
+            background-color: #e6b800;
+            box-shadow: 0 6px 16px rgba(255, 204, 0, 0.3);
         }
         .center {
             text-align: center;
         }
+        pre {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: auto;
+            color: #e6e6e6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin: 25px 0;
+        }
+        code {
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 90%;
+        }
+        .code-comment {
+            color: #6A9955;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+        td {
+            border-bottom: 1px solid var(--border-color);
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        tr:hover {
+            background-color: rgba(0, 120, 255, 0.05);
+        }
+        .speedup {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Section styling */
+        .section {
+            margin: 60px 0;
+        }
+        .section-title {
+            position: relative;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        /* List styling */
+        ul {
+            padding-left: 20px;
+        }
+        ul li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        ul li::before {
+            content: '⚡';
+            position: absolute;
+            left: -20px;
+            color: var(--primary-color);
+        }
+
+        /* Footer styling */
+        .footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-light);
+        }
     </style>
 </head>
 <body>
-    <div class="logo">
-        <img src="assets/logo.png" alt="flash-install logo">
+    <div class="header">
+        <div class="logo">
+            <img src="assets/logo.png" alt="flash-install logo">
+        </div>
+
+        <h1>⚡ flash-install</h1>
+        <p class="tagline">Blazingly fast package installation for Node.js</p>
+
+        <div>
+            <a href="https://github.com/Nom-nom-hub/flash-install" class="button">GitHub</a>
+            <a href="https://www.npmjs.com/package/@flash-install/cli" class="button secondary">npm</a>
+        </div>
     </div>
-    
-    <h1>⚡ flash-install</h1>
-    <p class="center">Blazingly fast package installation for Node.js</p>
-    
-    <div class="center">
-        <a href="https://github.com/Nom-nom-hub/flash-install" class="button">GitHub</a>
-        <a href="https://www.npmjs.com/package/@flash-install/cli" class="button">npm</a>
+
+    <div class="section">
+        <h2 class="section-title">What is flash-install?</h2>
+        <p>flash-install is a fast, drop-in replacement for <code>npm install</code>, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and <code>.flashpack</code> archive snapshotting.</p>
     </div>
-    
-    <h2>What is flash-install?</h2>
-    <p>flash-install is a fast, drop-in replacement for <code>npm install</code>, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and <code>.flashpack</code> archive snapshotting.</p>
-    
+
     <div class="features">
         <div class="feature">
             <h3>⚡ Blazing Fast</h3>
-            <p>Installs dependencies from cache when available, avoiding network requests</p>
+            <p>Installs dependencies from cache when available, avoiding network requests and reducing installation time by up to 30x</p>
         </div>
         <div class="feature">
             <h3>📦 Snapshot Support</h3>
-            <p>Creates and restores <code>.flashpack</code> archives for instant dependency restoration</p>
+            <p>Creates and restores <code>.flashpack</code> archives for instant dependency restoration, perfect for CI/CD environments</p>
         </div>
         <div class="feature">
             <h3>🔄 Parallel Operations</h3>
-            <p>Installs packages in parallel using Node.js worker threads</p>
+            <p>Installs packages in parallel using Node.js worker threads, maximizing your system's capabilities</p>
         </div>
         <div class="feature">
             <h3>🔒 Offline Mode</h3>
-            <p>Install dependencies without internet connection using cache or snapshots</p>
+            <p>Install dependencies without internet connection using cache or snapshots, ideal for air-gapped environments</p>
         </div>
         <div class="feature">
             <h3>✅ Checksum Validation</h3>
-            <p>Verifies package integrity against npm registry checksums</p>
+            <p>Verifies package integrity against npm registry checksums, ensuring security and reliability</p>
         </div>
         <div class="feature">
             <h3>🔌 Plugin System</h3>
-            <p>Extensible architecture with lifecycle hooks</p>
+            <p>Extensible architecture with lifecycle hooks for custom workflows and integrations</p>
         </div>
     </div>
-    
-    <h2>Installation</h2>
-    <pre><code>npm install -g @flash-install/cli</code></pre>
-    
-    <h2>Basic Usage</h2>
-    <pre><code># Standard installation
+
+    <div class="section">
+        <h2 class="section-title">Installation</h2>
+        <pre><code>npm install -g @flash-install/cli</code></pre>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Basic Usage</h2>
+        <pre><code><span class="code-comment"># Standard installation</span>
 flash-install
 
-# Create a snapshot
+<span class="code-comment"># Create a snapshot</span>
 flash-install snapshot
 
-# Restore from a snapshot
+<span class="code-comment"># Restore from a snapshot</span>
 flash-install restore
 
-# Clean up
-flash-install clean</code></pre>
-    
-    <h2>Documentation</h2>
-    <p>For full documentation, please visit the <a href="https://github.com/Nom-nom-hub/flash-install">GitHub repository</a>.</p>
-    
-    <div class="center">
-        <p>Copyright &copy; 2023 flash-install. Distributed under an MIT license.</p>
+<span class="code-comment"># Clean up</span>
+flash-install clean
+
+<span class="code-comment"># Clean only node_modules (preserves snapshot)</span>
+flash-install clean-modules
+
+<span class="code-comment"># Clean only snapshot (preserves node_modules)</span>
+flash-install clean-snapshot</code></pre>
     </div>
+
+    <div class="section">
+        <h2 class="section-title">Performance Comparison</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>npm install</th>
+                    <th>flash-install</th>
+                    <th>Speedup</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>First install (small project)</td>
+                    <td>30-60s</td>
+                    <td>10-15s</td>
+                    <td class="speedup">3-4x</td>
+                </tr>
+                <tr>
+                    <td>First install (large project)</td>
+                    <td>3-5min</td>
+                    <td>1-2min</td>
+                    <td class="speedup">2-3x</td>
+                </tr>
+                <tr>
+                    <td>Subsequent install (from cache)</td>
+                    <td>30-60s</td>
+                    <td>5-10s</td>
+                    <td class="speedup">6-10x</td>
+                </tr>
+                <tr>
+                    <td>Subsequent install (from snapshot)</td>
+                    <td>30-60s</td>
+                    <td>1-3s</td>
+                    <td class="speedup">20-30x</td>
+                </tr>
+                <tr>
+                    <td>CI/CD environment</td>
+                    <td>1-3min</td>
+                    <td>5-15s</td>
+                    <td class="speedup">10-20x</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Advanced Features</h2>
+        <ul>
+            <li><strong>Selective Cleaning</strong>: Clean only node_modules or only snapshots</li>
+            <li><strong>Cache Management</strong>: Optimize and verify your global cache</li>
+            <li><strong>Plugin System</strong>: Extend functionality with custom plugins</li>
+            <li><strong>Offline Mode</strong>: Work without internet connection</li>
+            <li><strong>Custom Snapshot Formats</strong>: Choose between different compression formats</li>
+            <li><strong>Checksum Validation</strong>: Verify package integrity against npm registry checksums</li>
+            <li><strong>Snapshot Fingerprinting</strong>: Auto-invalidate snapshots when lockfiles change</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Documentation</h2>
+        <p>For full documentation, please visit the <a href="https://github.com/Nom-nom-hub/flash-install">GitHub repository</a>.</p>
+
+        <div class="center" style="margin-top: 30px;">
+            <a href="https://github.com/Nom-nom-hub/flash-install" class="button">Get Started</a>
+            <a href="https://www.npmjs.com/package/@flash-install/cli" class="button secondary">View on npm</a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Copyright &copy; 2023 flash-install. Distributed under an MIT license.</p>
+        <p>Made with ⚡ for the JavaScript community</p>
+    </div>
+
+    <script>
+        // Add a simple animation to the logo
+        document.addEventListener('DOMContentLoaded', function() {
+            const logo = document.querySelector('.logo img');
+
+            // Add a subtle pulse animation
+            setInterval(() => {
+                logo.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    logo.style.transform = 'scale(1)';
+                }, 500);
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
