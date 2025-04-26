@@ -1,6 +1,6 @@
 {
   "name": "@flash-install/cli",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "A fast, drop-in replacement for npm install with deterministic caching",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,14 @@
     "postinstall": "node scripts/postinstall.js",
     "publish-package": "./scripts/publish.sh"
   },
-  "keywords": ["npm", "install", "cache", "fast", "dependencies", "package manager"],
+  "keywords": [
+    "npm",
+    "install",
+    "cache",
+    "fast",
+    "dependencies",
+    "package manager"
+  ],
   "author": "Flash Install Team",
   "license": "MIT",
   "engines": {
@@ -47,6 +54,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@flash-install/cli": "^1.3.5",
     "@yarnpkg/lockfile": "^1.1.0",
     "archiver": "^5.3.1",
     "chalk": "^5.2.0",

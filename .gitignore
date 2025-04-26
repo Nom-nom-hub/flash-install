@@ -5,3 +5,4 @@ dist
 *.log
 .flashpack
 .flashpack-metadata.json
+test-flash-install
