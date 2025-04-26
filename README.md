@@ -7,7 +7,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg)](https://nodejs.org/)
-[![npm version](https://img.shields.io/badge/npm-v1.3.4-blue.svg)](https://www.npmjs.com/package/@flash-install/cli)
+[![npm version](https://img.shields.io/badge/npm-v1.3.6-blue.svg)](https://www.npmjs.com/package/@flash-install/cli)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Nom-nom-hub/flash-install/pulls)
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
@@ -43,6 +43,27 @@ flash-install
 
 # Or use direct mode for better progress reporting
 flash-direct
+```
+
+### Installing Specific Packages
+
+Install individual packages just like with npm:
+
+```bash
+# Install packages
+flash-install express react
+
+# Install with specific version
+flash-install lodash@4.17.21
+
+# Save to dependencies (default)
+flash-install axios --save
+
+# Save to devDependencies
+flash-install jest --save-dev
+
+# Save exact version
+flash-install typescript@5.0.4 --save-exact
 ```
 
 ### Creating a Snapshot

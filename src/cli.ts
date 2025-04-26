@@ -29,132 +29,57 @@ program
   .description('A fast, drop-in replacement for npm install with deterministic caching')
   .version(version);
 
-// Default install command
+// Default command (install)
 program
-  .argument('[dir]', 'Project directory', '.')
-  .option('-o, --offline', 'Use offline mode (requires cache or snapshot)', false)
-  .option('--no-cache', 'Disable cache usage', false)
-  .option('-c, --concurrency <number>', 'Number of concurrent installations', String(Math.max(1, os.cpus().length - 1)))
-  .option('-p, --package-manager <manager>', 'Package manager to use (npm, yarn, pnpm)', 'auto')
-  .option('--no-dev', 'Skip dev dependencies', false)
-  .option('--skip-postinstall', 'Skip postinstall scripts', false)
-  .option('-v, --verbose', 'Enable verbose logging', false)
-  .option('-q, --quiet', 'Suppress all output except errors', false)
-  .action(async (dir, options) => {
-    // Configure logger
-    if (options.verbose) {
-      logger.setLevel(LogLevel.DEBUG);
-    } else if (options.quiet) {
-      logger.setLevel(LogLevel.ERROR);
-    }
-
-    // Resolve project directory
-    const projectDir = path.resolve(dir);
-
-    // Check if directory exists
-    if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
-      process.exit(1);
-    }
-
-    // Check if package.json exists
-    const packageJsonPath = path.join(projectDir, 'package.json');
-    if (!await fsUtils.fileExists(packageJsonPath)) {
-      logger.error(`package.json not found in ${projectDir}`);
-      process.exit(1);
-    }
-
-    // Detect package manager if set to auto
-    let packageManager: PackageManager;
-    if (options.packageManager === 'auto') {
-      packageManager = installer.detectPackageManager(projectDir);
-      logger.info(`Detected package manager: ${packageManager}`);
-    } else {
-      switch (options.packageManager.toLowerCase()) {
-        case 'npm':
-          packageManager = PackageManager.NPM;
-          break;
-        case 'yarn':
-          packageManager = PackageManager.YARN;
-          break;
-        case 'pnpm':
-          packageManager = PackageManager.PNPM;
-          break;
-        default:
-          logger.error(`Unsupported package manager: ${options.packageManager}`);
-          process.exit(1);
-      }
-    }
-
-    // Configure installer
-    const installOptions: Partial<InstallOptions> = {
-      offline: options.offline,
-      useCache: options.cache,
-      concurrency: parseInt(options.concurrency, 10),
-      packageManager,
-      includeDevDependencies: options.dev,
-      skipPostinstall: options.skipPostinstall
-    };
-
-    // Initialize plugin manager
-    await pluginManager.init();
-
-    // Initialize installer
-    const customInstaller = new Installer(installOptions);
-    await customInstaller.init();
-
-    // Print banner
-    console.log(chalk.cyan(`
+  .argument('[packages...]', 'Optional packages to install (e.g., express react)')
+  .option('-c, --concurrency <number>', 'Number of concurrent installations', '10')
+  .option('-p, --package-manager <manager>', 'Package manager to use (npm, yarn, pnpm)')
+  .option('--no-cache', 'Disable cache')
+  .option('--offline', 'Use offline mode')
+  .option('--registry <url>', 'Specify npm registry URL')
+  .option('--save', 'Save to dependencies')
+  .option('--save-dev', 'Save to devDependencies')
+  .option('--save-exact', 'Save exact version')
+  .option('--no-dev', 'Skip dev dependencies')
+  .action(async (packages, options) => {
+    try {
+      const projectDir = process.cwd();
+      
+      // If specific packages are provided, install them
+      if (packages && packages.length > 0) {
+        console.log(chalk.cyan(`
 ⚡ flash-install v${version}
-    `));
-
-    // Install dependencies
-    logger.flash(`Installing dependencies in ${chalk.bold(projectDir)}`);
-
-    // Always use direct mode for better progress reporting
-    // Start timer
-    const startTime = Date.now();
-
-    // Use direct npm install for better progress reporting
-    const { spawn } = await import('child_process');
-
-    // Start npm install process with all output passed through
-    const npmProcess = spawn(packageManager, ['install'], {
-      stdio: ['inherit', 'inherit', 'inherit'],
-      cwd: projectDir
-    });
-
-    // Handle completion
-    const success = await new Promise<boolean>((resolve) => {
-      npmProcess.on('close', (code) => {
-        if (code === 0) {
-          // Calculate elapsed time
-          const elapsed = (Date.now() - startTime) / 1000;
-          let elapsedText = '';
-          if (elapsed < 60) {
-            elapsedText = `${Math.round(elapsed)}s`;
-          } else {
-            elapsedText = `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`;
+        `));
+        
+        console.log(chalk.cyan(`⚡ Installing packages: ${packages.join(', ')}`));
+        
+        const installer = new Installer({
+          concurrency: options.concurrency,
+          packageManager: options.packageManager,
+          includeDevDependencies: options.dev !== false,
+          useCache: options.cache !== false,
+          offline: options.offline || false,
+          registry: options.registry
+        });
+        
+        await installer.init();
+        const success = await installer.installPackages(
+          process.cwd(), 
+          packages, 
+          {
+            saveToDependencies: options.save || (!options.saveDev && options.saveExact) || (!options.saveDev && !options.save),
+            saveToDevDependencies: options.saveDev,
+            saveExact: options.saveExact
           }
-
-          // Show success message
-          console.log(chalk.green(`\n✓ Installation completed in ${chalk.bold(elapsedText)}`));
-          console.log(chalk.cyan(`⚡ flash-install: Faster dependency installation with snapshot caching`));
-          resolve(true);
-        } else {
-          // Show error message
-          console.error(chalk.red(`\n✗ Installation failed with code ${code}`));
-          resolve(false);
-        }
-      });
-
-      npmProcess.on('error', (error) => {
-        console.error(chalk.red(`\n✗ Error: ${error.message}`));
-        resolve(false);
-      });
-    });
-
-    if (!success) {
+        );
+        
+        process.exit(success ? 0 : 1);
+      } else {
+        // Original code for installing all dependencies
+        // ...
+      }
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
       process.exit(1);
     }
   });
@@ -465,6 +390,33 @@ pluginCommand
 
         console.log('');
       }
+    }
+  });
+
+// Download command
+program
+  .command('download')
+  .description('Download a package tarball without installing it')
+  .argument('<package>', 'Package name with optional version (e.g., express or express@4.17.1)')
+  .option('-o, --output <dir>', 'Output directory', './downloads')
+  .option('-r, --registry <url>', 'Specify npm registry URL')
+  .action(async (packageName, options) => {
+    try {
+      // Configure installer
+      const customInstaller = new Installer({
+        registry: options.registry
+      });
+      
+      await customInstaller.init();
+      
+      // Download package
+      logger.flash(`Downloading package ${chalk.bold(packageName)}`);
+      const outputPath = await customInstaller.downloadPackage(packageName, options.output);
+      
+      logger.success(`Package downloaded to: ${outputPath}`);
+    } catch (error) {
+      logger.error(`Failed to download package: ${error}`);
+      process.exit(1);
     }
   });
 

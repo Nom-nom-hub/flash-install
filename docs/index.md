@@ -98,7 +98,7 @@ flash-install is a fast, drop-in replacement for `npm install`, focused on drast
 Install flash-install globally:
 
 ```bash
-npm install -g @flash-install/cli
+npm install -g @flash-install/cli@1.3.6
 ```
 
 Replace your regular `npm install` command with `flash-install`:

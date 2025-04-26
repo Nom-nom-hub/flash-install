@@ -18,6 +18,7 @@ import { ReliableProgress } from './utils/reliable-progress.js';
 import { pluginManager, PluginHook } from './plugin.js';
 import { verifyPackageIntegrity } from './utils/integrity.js';
 import chalk from 'chalk';
+import { installPackages, PackageInstallOptions, downloadPackage } from './package-installer.js';
 // Import version from package.json
 const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const version = packageJson.version;
@@ -41,6 +42,7 @@ export interface InstallOptions {
   packageManager: PackageManager;
   includeDevDependencies: boolean;
   skipPostinstall: boolean;
+  registry?: string; // Add registry option
 }
 
 /**
@@ -866,6 +868,36 @@ export class Installer {
       logger.error(`Clean failed: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Install specific packages
+   * @param projectDir Project directory
+   * @param packages Array of package names with optional versions
+   * @param options Installation options
+   * @returns True if successful
+   */
+  async installPackages(
+    projectDir: string,
+    packages: string[],
+    options: PackageInstallOptions
+  ): Promise<boolean> {
+    return installPackages(projectDir, packages, this.options.packageManager, {
+      ...options,
+      registry: this.options.registry
+    });
+  }
+
+  /**
+   * Download a package tarball
+   * @param packageName Package name with optional version
+   * @param outputDir Output directory
+   * @returns Path to downloaded tarball
+   */
+  async downloadPackage(packageName: string, outputDir: string): Promise<string> {
+    return downloadPackage(packageName, outputDir, {
+      registry: this.options.registry
+    });
   }
 }
 
