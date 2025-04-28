@@ -1,11 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "public/**", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ],
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "public",
   "github": {
     "silent": true
   }
