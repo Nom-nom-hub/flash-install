@@ -62,10 +62,10 @@ All high and medium priority features have been completed! 🎉
 
 ### Medium Priority Features
 
-- [ ] **Interactive CLI Mode**
-  - TUI (Text User Interface) for managing dependencies
-  - Interactive snapshot management
-  - Visual dependency browser
+- [x] **Interactive CLI Mode**
+  - [x] TUI (Text User Interface) for managing dependencies
+  - [x] Interactive snapshot management
+  - [x] Visual dependency browser
 
 - [ ] **Integration with Package Managers**
   - Deeper integration with npm, yarn, and pnpm
