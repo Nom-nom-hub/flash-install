@@ -29,19 +29,19 @@ export async function getLockfileHash(
 ): Promise<string | null> {
   try {
     const lockfilePath = path.join(projectDir, lockfileType);
-    
+
     // Check if lockfile exists
     if (!await fsUtils.fileExists(lockfilePath)) {
       logger.debug(`Lockfile not found: ${lockfilePath}`);
       return null;
     }
-    
+
     // Read lockfile content
     const content = await fs.promises.readFile(lockfilePath, 'utf8');
-    
+
     // Create hash
     const hash = crypto.createHash('sha256').update(content).digest('hex');
-    
+
     return hash;
   } catch (error) {
     logger.error(`Failed to get lockfile hash: ${error}`);
@@ -59,17 +59,17 @@ export async function detectLockfileType(projectDir: string): Promise<LockfileTy
   if (await fsUtils.fileExists(path.join(projectDir, LockfileType.NPM))) {
     return LockfileType.NPM;
   }
-  
+
   // Check for yarn.lock (Yarn)
   if (await fsUtils.fileExists(path.join(projectDir, LockfileType.YARN))) {
     return LockfileType.YARN;
   }
-  
+
   // Check for pnpm-lock.yaml (PNPM)
   if (await fsUtils.fileExists(path.join(projectDir, LockfileType.PNPM))) {
     return LockfileType.PNPM;
   }
-  
+
   return null;
 }
 
@@ -86,17 +86,17 @@ export async function parseLockfileDependencies(
   try {
     // Detect lockfile type if not provided
     const type = lockfileType || await detectLockfileType(projectDir);
-    
+
     if (!type) {
       logger.warn('No lockfile found in project directory');
       return null;
     }
-    
+
     const lockfilePath = path.join(projectDir, type);
-    
+
     // Read lockfile content
     const content = await fs.promises.readFile(lockfilePath, 'utf8');
-    
+
     // Parse lockfile based on type
     switch (type) {
       case LockfileType.NPM:
@@ -124,7 +124,7 @@ function parseNpmLockfile(content: string): Record<string, string> {
   try {
     const parsed = JSON.parse(content);
     const dependencies: Record<string, string> = {};
-    
+
     // Extract dependencies from packages
     if (parsed.packages) {
       Object.entries(parsed.packages).forEach(([pkgPath, pkgInfo]: [string, any]) => {
@@ -143,7 +143,7 @@ function parseNpmLockfile(content: string): Record<string, string> {
         }
       });
     }
-    
+
     return dependencies;
   } catch (error) {
     logger.error(`Failed to parse NPM lockfile: ${error}`);
@@ -160,7 +160,7 @@ function parseYarnLockfile(content: string): Record<string, string> {
   try {
     const parsed = lockfile.parse(content);
     const dependencies: Record<string, string> = {};
-    
+
     if (parsed.object) {
       Object.entries(parsed.object).forEach(([key, info]: [string, any]) => {
         const name = key.split('@')[0];
@@ -169,7 +169,7 @@ function parseYarnLockfile(content: string): Record<string, string> {
         }
       });
     }
-    
+
     return dependencies;
   } catch (error) {
     logger.error(`Failed to parse Yarn lockfile: ${error}`);
@@ -187,9 +187,9 @@ function parsePnpmLockfile(content: string): Record<string, string> {
     // Simple YAML parsing for PNPM lockfile
     const dependencies: Record<string, string> = {};
     const lines = content.split('\n');
-    
+
     let currentPackage = '';
-    
+
     for (const line of lines) {
       if (line.startsWith('  /')) {
         // Package definition line
@@ -204,7 +204,7 @@ function parsePnpmLockfile(content: string): Record<string, string> {
         currentPackage = '';
       }
     }
-    
+
     return dependencies;
   } catch (error) {
     logger.error(`Failed to parse PNPM lockfile: ${error}`);
@@ -220,29 +220,29 @@ function parsePnpmLockfile(content: string): Record<string, string> {
  */
 export async function hasLockfileChanged(
   projectDir: string,
-  previousHash: string | null
+  previousHash: string | null | undefined
 ): Promise<boolean> {
   // If no previous hash, consider it changed
   if (!previousHash) {
     return true;
   }
-  
+
   // Detect lockfile type
   const lockfileType = await detectLockfileType(projectDir);
-  
+
   if (!lockfileType) {
     logger.warn('No lockfile found in project directory');
     return true;
   }
-  
+
   // Get current hash
   const currentHash = await getLockfileHash(projectDir, lockfileType);
-  
+
   // If no current hash, consider it changed
   if (!currentHash) {
     return true;
   }
-  
+
   // Compare hashes
   return currentHash !== previousHash;
 }

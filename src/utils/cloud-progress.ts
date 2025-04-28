@@ -10,7 +10,7 @@ export class CloudProgress {
   private interval: NodeJS.Timeout | null = null;
   private frames: string[] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   private frameIndex: number = 0;
-  
+
   /**
    * Create a new cloud progress indicator
    * @param message Progress message
@@ -19,7 +19,7 @@ export class CloudProgress {
     this.message = message;
     this.startTime = Date.now();
   }
-  
+
   /**
    * Start the progress indicator
    */
@@ -27,21 +27,21 @@ export class CloudProgress {
     if (this.interval) {
       return;
     }
-    
+
     this.interval = setInterval(() => {
       const frame = this.frames[this.frameIndex];
       const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(1);
-      
+
       // Clear previous output
       process.stdout.write('\r\x1b[K');
-      
+
       // Write new output
       process.stdout.write(`${chalk.cyan(frame)} ${this.message} ${chalk.gray(`(${elapsed}s)`)}`);
-      
+
       this.frameIndex = (this.frameIndex + 1) % this.frames.length;
     }, 80);
   }
-  
+
   /**
    * Stop the progress indicator
    */
@@ -49,17 +49,25 @@ export class CloudProgress {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
-      
+
       // Clear previous output
       process.stdout.write('\r\x1b[K');
     }
   }
-  
+
   /**
    * Update the progress message
    * @param message New message
    */
   updateStatus(message: string): void {
     this.message = message;
+  }
+
+  /**
+   * Set the progress status (alias for updateStatus)
+   * @param message New status message
+   */
+  setStatus(message: string): void {
+    this.updateStatus(message);
   }
 }

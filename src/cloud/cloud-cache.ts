@@ -135,12 +135,12 @@ export class CloudCache {
         const currentHash = await getLockfileHash(config.projectDir);
 
         // Update the config with the current hash
-        this.config.lockfileHash = currentHash;
+        this.config.lockfileHash = currentHash || undefined;
 
         // Check if lockfile has changed
         if (await hasLockfileChanged(config.projectDir, config.lockfileHash)) {
           logger.info('Lockfile has changed, cache will be invalidated');
-          this.config.lockfileHash = currentHash;
+          this.config.lockfileHash = currentHash || undefined;
         } else {
           logger.debug('Lockfile has not changed, using existing cache');
         }
@@ -223,7 +223,7 @@ export class CloudCache {
         if (shouldInvalidate) {
           logger.info(`Lockfile has changed, invalidating cache for ${name}@${version}`);
           // Update the hash
-          this.config.lockfileHash = await getLockfileHash(this.config.projectDir);
+          this.config.lockfileHash = await getLockfileHash(this.config.projectDir) || undefined;
         }
       }
 
@@ -432,7 +432,7 @@ export class CloudCache {
         if (shouldInvalidate) {
           logger.info('Lockfile has changed, invalidating dependency tree cache');
           // Update the hash
-          this.config.lockfileHash = await getLockfileHash(this.config.projectDir);
+          this.config.lockfileHash = await getLockfileHash(this.config.projectDir) || undefined;
         }
       }
 
