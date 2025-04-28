@@ -1,0 +1,106 @@
+name: 'Flash Install Action'
+description: 'Speed up your CI/CD pipeline with flash-install, a fast npm alternative with deterministic caching'
+author: 'flash-install'
+branding:
+  icon: 'zap'
+  color: 'yellow'
+
+inputs:
+  command:
+    description: 'Command to run (install, restore, snapshot, clean, etc.)'
+    required: false
+    default: 'install'
+  
+  directory:
+    description: 'Directory to run the command in'
+    required: false
+    default: '.'
+  
+  cache-enabled:
+    description: 'Enable caching'
+    required: false
+    default: 'true'
+  
+  cloud-cache:
+    description: 'Enable cloud caching'
+    required: false
+    default: 'false'
+  
+  cloud-provider:
+    description: 'Cloud provider (s3, azure, gcp)'
+    required: false
+    default: 's3'
+  
+  cloud-bucket:
+    description: 'Cloud bucket name'
+    required: false
+    default: ''
+  
+  cloud-region:
+    description: 'Cloud region'
+    required: false
+    default: ''
+  
+  cloud-prefix:
+    description: 'Cloud prefix'
+    required: false
+    default: 'flash-install-cache'
+  
+  package-manager:
+    description: 'Package manager to use (npm, yarn, pnpm, bun)'
+    required: false
+    default: 'npm'
+  
+  concurrency:
+    description: 'Number of concurrent downloads'
+    required: false
+    default: '4'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+    
+    - name: Install flash-install
+      shell: bash
+      run: npm install -g @flash-install/cli
+    
+    - name: Setup cache directory
+      shell: bash
+      run: mkdir -p ~/.flash-install-cache
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      if: inputs.cache-enabled == 'true'
+      with:
+        path: ~/.flash-install-cache
+        key: ${{ runner.os }}-flash-install-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/bun.lockb') }}
+        restore-keys: |
+          ${{ runner.os }}-flash-install-
+    
+    - name: Run flash-install
+      shell: bash
+      run: |
+        FLASH_ARGS=""
+        
+        if [ "${{ inputs.cloud-cache }}" == "true" ]; then
+          FLASH_ARGS="$FLASH_ARGS --cloud-cache --cloud-provider ${{ inputs.cloud-provider }}"
+          
+          if [ -n "${{ inputs.cloud-bucket }}" ]; then
+            FLASH_ARGS="$FLASH_ARGS --cloud-bucket ${{ inputs.cloud-bucket }}"
+          fi
+          
+          if [ -n "${{ inputs.cloud-region }}" ]; then
+            FLASH_ARGS="$FLASH_ARGS --cloud-region ${{ inputs.cloud-region }}"
+          fi
+          
+          FLASH_ARGS="$FLASH_ARGS --cloud-prefix ${{ inputs.cloud-prefix }}"
+        fi
+        
+        FLASH_ARGS="$FLASH_ARGS --package-manager ${{ inputs.package-manager }} --concurrency ${{ inputs.concurrency }}"
+        
+        cd ${{ inputs.directory }}
+        flash-install ${{ inputs.command }} $FLASH_ARGS

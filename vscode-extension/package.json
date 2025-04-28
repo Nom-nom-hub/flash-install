@@ -1,0 +1,119 @@
+{
+  "name": "flash-install-vscode",
+  "displayName": "Flash Install",
+  "description": "Speed up your npm workflows with flash-install",
+  "version": "0.1.0",
+  "publisher": "flash-install",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:flash-install.install",
+    "onCommand:flash-install.restore",
+    "onCommand:flash-install.snapshot",
+    "onCommand:flash-install.clean",
+    "onCommand:flash-install.visualize"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "flash-install.install",
+        "title": "Flash Install: Install Dependencies"
+      },
+      {
+        "command": "flash-install.restore",
+        "title": "Flash Install: Restore from Snapshot"
+      },
+      {
+        "command": "flash-install.snapshot",
+        "title": "Flash Install: Create Snapshot"
+      },
+      {
+        "command": "flash-install.clean",
+        "title": "Flash Install: Clean node_modules"
+      },
+      {
+        "command": "flash-install.visualize",
+        "title": "Flash Install: Visualize Dependencies"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "flash-install.install",
+          "group": "flash-install"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "flash-install.restore",
+          "group": "flash-install"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "flash-install.snapshot",
+          "group": "flash-install"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "flash-install.clean",
+          "group": "flash-install"
+        },
+        {
+          "when": "resourceFilename == 'package.json'",
+          "command": "flash-install.visualize",
+          "group": "flash-install"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Flash Install",
+      "properties": {
+        "flash-install.packageManager": {
+          "type": "string",
+          "default": "npm",
+          "enum": ["npm", "yarn", "pnpm", "bun"],
+          "description": "Package manager to use"
+        },
+        "flash-install.cloudCache": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable cloud caching"
+        },
+        "flash-install.cloudProvider": {
+          "type": "string",
+          "default": "s3",
+          "enum": ["s3", "azure", "gcp"],
+          "description": "Cloud provider for caching"
+        },
+        "flash-install.cloudBucket": {
+          "type": "string",
+          "default": "",
+          "description": "Cloud bucket name"
+        },
+        "flash-install.cloudRegion": {
+          "type": "string",
+          "default": "",
+          "description": "Cloud region"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "echo 'No compilation needed'",
+    "lint": "eslint .",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "eslint": "^8.0.0",
+    "vsce": "^2.0.0"
+  },
+  "dependencies": {}
+}
