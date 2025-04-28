@@ -1,13 +1,13 @@
 # These are supported funding model platforms
 
-github: [Nom-nom-hub] # Replace with your GitHub username
+# github: # Your GitHub username will be added here once your Sponsors account is approved
 # patreon: # Replace with your Patreon username once set up
 # open_collective: # Replace with your Open Collective username once set up
 # ko_fi: # Replace with your Ko-fi username if you decide to use it
-# tidelift: # npm/flash-install
+# tidelift: # npm/@flash-install/cli
 # community_bridge: # Replace with your Community Bridge project name
 # liberapay: # Replace with your Liberapay username
 # issuehunt: # Replace with your IssueHunt username
 # otechie: # Replace with your Otechie username
 # lfx_crowdfunding: # Replace with your LFX Crowdfunding project name
-custom: ['https://github.com/Nom-nom-hub/flash-install'] # Replace with up to 4 custom sponsorship URLs
+custom: ['https://github.com/Nom-nom-hub/flash-install'] # Custom sponsorship URL
