@@ -115,20 +115,21 @@ export class ProgressIndicator {
     const percent = Math.min(100, Math.floor((this.current / this.total) * 100));
 
     // Calculate elapsed time
-    const elapsed = (Date.now() - this.startTime) / 1000;
+    const elapsed = Math.max(0.1, (Date.now() - this.startTime) / 1000);
 
     // Calculate estimated time remaining
     let eta = '?';
     if (this.current > 0) {
-      const itemsPerSecond = this.current / elapsed;
-      const remainingItems = this.total - this.current;
-      const remainingSeconds = remainingItems / itemsPerSecond;
+      // Calculate speed with a moving average to smooth out fluctuations
+      const itemsPerSecond = Math.max(0.1, this.current / elapsed);
+      const remainingItems = Math.max(0, this.total - this.current);
+      const remainingSeconds = Math.max(0, remainingItems / itemsPerSecond);
 
       if (remainingSeconds < 60) {
-        eta = `${remainingSeconds.toFixed(0)}s`;
+        eta = `${Math.ceil(remainingSeconds)}s`;
       } else {
         const minutes = Math.floor(remainingSeconds / 60);
-        const seconds = Math.floor(remainingSeconds % 60);
+        const seconds = Math.ceil(remainingSeconds % 60);
         eta = `${minutes}m ${seconds}s`;
       }
     }
@@ -155,8 +156,8 @@ export class ProgressIndicator {
       recentItemsText = `\n  ${activity} Recent: ${this.recentItems.map(item => chalk.green(item)).join(', ')}`;
     }
 
-    // Format speed
-    const speed = this.current > 0 ? (this.current / elapsed).toFixed(1) : '0.0';
+    // Format speed (with safety checks to avoid NaN or Infinity)
+    const speed = this.current > 0 ? Math.max(0, Math.min(1000, this.current / elapsed)).toFixed(1) : '0.0';
     const speedText = `\n  ${chalk.cyan('⚡')} Speed: ${chalk.yellow(speed)} packages/sec`;
 
     // Format elapsed time

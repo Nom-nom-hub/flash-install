@@ -28,7 +28,7 @@ export interface PackageInstallOptions {
 export async function installPackages(
   projectDir: string,
   packages: string[],
-  packageManager: PackageManager,
+  packageManager: PackageManager = PackageManager.NPM,
   options: PackageInstallOptions = {}
 ): Promise<boolean> {
   try {
@@ -37,114 +37,136 @@ export async function installPackages(
     console.log('Will save to dependencies:', options.saveToDependencies);
     console.log('Will save to devDependencies:', options.saveToDevDependencies);
     console.log('Will save exact version:', options.saveExact);
-    
+
     // Start timer
     const startTime = Date.now();
-    
+
     // Create node_modules directory if it doesn't exist
     const nodeModulesPath = path.join(projectDir, 'node_modules');
     await fsUtils.ensureDir(nodeModulesPath);
-    
+
+    // Filter out invalid packages
+    const validPackages = packages.filter(pkg => {
+      // Skip packages with invalid names or paths
+      if (pkg.includes('/node_modules/') || pkg.includes('undefined')) {
+        console.log(chalk.yellow(`⚠ Skipping invalid package: ${pkg}`));
+        return false;
+      }
+      return true;
+    });
+
+    // If no valid packages, return early
+    if (validPackages.length === 0) {
+      console.log(chalk.yellow('No valid packages to install'));
+      return true;
+    }
+
     // Process each package
-    console.log(chalk.cyan(`→ Installing ${packages.length} packages...`));
-    
+    console.log(chalk.cyan(`→ Installing ${validPackages.length} packages...`));
+
     // Track progress
     let installed = 0;
     const packageVersions: Record<string, string> = {};
-    
+
     // Create progress indicator
-    const progress = new ProgressIndicator(packages.length, 'Installing packages');
-    
-    for (const pkg of packages) {
-      // Parse package name and version
-      let name = pkg;
-      let version = 'latest';
-      
-      if (pkg.includes('@') && !pkg.startsWith('@')) {
-        [name, version] = pkg.split('@');
-      } else if (pkg.startsWith('@')) {
-        // Handle scoped packages
-        const parts = pkg.split('@');
-        if (parts.length > 2) {
-          name = `@${parts[1]}`;
-          version = parts[2];
-        } else {
-          name = pkg;
+    const progress = new ProgressIndicator(validPackages.length, 'Installing packages');
+
+    // Use npm directly for more reliable installation
+    try {
+      // Determine the appropriate command based on package manager
+      let cmd: string;
+      let saveFlag = '';
+
+      if (options.saveToDependencies) {
+        saveFlag = '--save';
+      } else if (options.saveToDevDependencies) {
+        saveFlag = '--save-dev';
+      } else {
+        saveFlag = '--no-save';
+      }
+
+      if (options.saveExact) {
+        saveFlag += ' --save-exact';
+      }
+
+      switch (packageManager) {
+        case PackageManager.NPM:
+          cmd = `npm install ${validPackages.join(' ')} ${saveFlag}`;
+          break;
+        case PackageManager.YARN:
+          cmd = `yarn add ${validPackages.join(' ')} ${saveFlag.replace('--save', '').replace('--save-dev', '--dev')}`;
+          break;
+        case PackageManager.PNPM:
+          cmd = `pnpm add ${validPackages.join(' ')} ${saveFlag}`;
+          break;
+        default:
+          cmd = `npm install ${validPackages.join(' ')} ${saveFlag}`;
+      }
+
+      if (options.registry) {
+        cmd += ` --registry ${options.registry}`;
+      }
+
+      console.log(`Executing: ${cmd}`);
+
+      // Execute the command
+      execSync(cmd, {
+        cwd: projectDir,
+        stdio: 'inherit' // Show output for better debugging
+      });
+
+      // Update progress
+      installed = validPackages.length;
+      progress.update(installed, 'Installation complete');
+
+      // For each package, try to add it to the cache
+      for (const pkg of validPackages) {
+        try {
+          // Parse package name and version
+          let name = pkg;
+          let version = 'latest';
+
+          if (pkg.includes('@') && !pkg.startsWith('@')) {
+            [name, version] = pkg.split('@');
+          } else if (pkg.startsWith('@')) {
+            // Handle scoped packages
+            const parts = pkg.split('@');
+            if (parts.length > 2) {
+              name = `@${parts[1]}`;
+              version = parts[2];
+            } else {
+              name = pkg;
+            }
+          }
+
+          // Get the installed version from node_modules
+          const packageJsonPath = path.join(nodeModulesPath, name, 'package.json');
+          if (await fsUtils.fileExists(packageJsonPath)) {
+            const packageJson = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf8'));
+            const installedVersion = packageJson.version;
+            packageVersions[name] = installedVersion;
+
+            // Add to cache
+            const packageNodeModulesPath = path.join(nodeModulesPath, name);
+            await cache.addPackage(name, installedVersion, packageNodeModulesPath);
+          }
+        } catch (cacheError) {
+          console.log(chalk.yellow(`⚠ Failed to cache package ${pkg}: ${cacheError}`));
+          // Continue with next package
         }
       }
-      
-      // Update progress text - use the correct method
-      progress.update(installed, `Installing ${name}@${version}`);
-      
-      // Resolve the actual version from npm
-      const resolvedVersion = await resolvePackageVersion(name, version);
-      packageVersions[name] = resolvedVersion;
-      
-      const packageNodeModulesPath = path.join(nodeModulesPath, name);
-      
-      // Check if package is in cache
-      if (await cache.hasPackage(name, resolvedVersion)) {
-        await cache.restorePackage(name, resolvedVersion, packageNodeModulesPath);
-        installed++;
-        continue;
-      }
-      
-      // Direct download from npm registry
-      const registryUrl = options.registry || 
-        execSync('npm config get registry', { encoding: 'utf8' }).trim().replace(/\/$/, '') || 
-        'https://registry.npmjs.org';
-      
-      const packageUrl = `${registryUrl}/${encodeURIComponent(name)}/-/${name}-${resolvedVersion}.tgz`;
-      
-      try {
-        // Create temp directory
-        const tempDir = path.join(os.tmpdir(), `flash-install-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
-        await fsUtils.ensureDir(tempDir);
-        
-        // Download and extract package
-        const tarballPath = path.join(tempDir, 'package.tgz');
-        
-        // Download using curl
-        execSync(`curl -s -L -o "${tarballPath}" "${packageUrl}"`, { stdio: 'ignore' });
-        
-        // Extract tarball
-        await fsUtils.ensureDir(packageNodeModulesPath);
-        execSync(`tar -xzf "${tarballPath}" -C "${packageNodeModulesPath}" --strip-components=1`, { stdio: 'ignore' });
-        
-        // Clean up
-        await fsUtils.remove(tempDir);
-        
-        // Add to cache
-        await cache.addPackage(name, resolvedVersion, packageNodeModulesPath);
-        installed++;
-      } catch (directError) {
-        // Fall back to package manager if direct download fails
-        const cmd = {
-          [PackageManager.NPM]: `npm install ${name}@${version} --no-save`,
-          [PackageManager.YARN]: `yarn add ${name}@${version} --no-save`,
-          [PackageManager.PNPM]: `pnpm add ${name}@${version} --no-save`
-        }[packageManager];
-        
-        execSync(cmd, { cwd: projectDir, stdio: 'ignore' });
-        
-        // Add to cache
-        await cache.addPackage(name, resolvedVersion, packageNodeModulesPath);
-        installed++;
-      }
+    } catch (error) {
+      console.error(chalk.red(`✗ Error installing packages: ${error instanceof Error ? error.message : String(error)}`));
+      return false;
     }
-    
-    // Update package.json if needed
-    if (options.saveToDependencies || options.saveToDevDependencies) {
-      await updatePackageJson(projectDir, packageVersions, options);
-    }
-    
-    // Complete progress - don't pass arguments if not supported
+
+    // Complete progress
     progress.complete();
-    
-    // Log completion separately
+
+    // Log completion
     const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(chalk.green(`✓ Installed ${installed} packages in ${elapsedTime}s`));
-    
+
     return true;
   } catch (error) {
     console.error(chalk.red(`✗ Error installing packages: ${error instanceof Error ? error.message : String(error)}`));
@@ -159,7 +181,7 @@ async function resolvePackageVersion(name: string, version: string): Promise<str
   if (version !== 'latest' && !version.startsWith('^') && !version.startsWith('~')) {
     return version; // Exact version specified
   }
-  
+
   try {
     // Use npm to get the latest version
     const cmd = `npm view ${name}@${version} version --json`;
@@ -180,31 +202,31 @@ async function updatePackageJson(
   options: PackageInstallOptions
 ): Promise<void> {
   const packageJsonPath = path.join(projectDir, 'package.json');
-  
+
   if (!await fsUtils.fileExists(packageJsonPath)) {
     console.warn(chalk.yellow(`No package.json found in ${projectDir}`));
     return;
   }
-  
+
   try {
     const packageJson = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf8'));
-    
+
     if (options.saveToDependencies) {
       packageJson.dependencies = packageJson.dependencies || {};
-      
+
       for (const [name, version] of Object.entries(packages)) {
         packageJson.dependencies[name] = options.saveExact ? version : `^${version}`;
       }
     }
-    
+
     if (options.saveToDevDependencies) {
       packageJson.devDependencies = packageJson.devDependencies || {};
-      
+
       for (const [name, version] of Object.entries(packages)) {
         packageJson.devDependencies[name] = options.saveExact ? version : `^${version}`;
       }
     }
-    
+
     // Write updated package.json
     await fs.promises.writeFile(
       packageJsonPath,
@@ -228,7 +250,7 @@ export async function downloadPackage(
     // Parse package name and version
     let name = packageName;
     let version = 'latest';
-    
+
     if (packageName.includes('@') && !packageName.startsWith('@')) {
       [name, version] = packageName.split('@');
     } else if (packageName.startsWith('@')) {
@@ -239,25 +261,25 @@ export async function downloadPackage(
         version = parts[2];
       }
     }
-    
+
     // Resolve the actual version
     const resolvedVersion = await resolvePackageVersion(name, version);
-    
+
     // Get registry URL
-    const registryUrl = options.registry || 
-      execSync('npm config get registry', { encoding: 'utf8' }).trim().replace(/\/$/, '') || 
+    const registryUrl = options.registry ||
+      execSync('npm config get registry', { encoding: 'utf8' }).trim().replace(/\/$/, '') ||
       'https://registry.npmjs.org';
-    
+
     // Create output directory if it doesn't exist
     await fsUtils.ensureDir(outputDir);
-    
+
     const packageUrl = `${registryUrl}/${encodeURIComponent(name)}/-/${name}-${resolvedVersion}.tgz`;
     const outputPath = path.join(outputDir, `${name}-${resolvedVersion}.tgz`);
-    
+
     // Download package tarball
     console.log(`Downloading ${name}@${resolvedVersion}...`);
     execSync(`curl -s -L -o "${outputPath}" "${packageUrl}"`, { stdio: 'ignore' });
-    
+
     return outputPath;
   } catch (error) {
     console.error(`Failed to download package ${packageName}: ${error instanceof Error ? error.message : String(error)}`);

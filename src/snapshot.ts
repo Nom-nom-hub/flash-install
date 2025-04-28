@@ -5,13 +5,33 @@ import decompress from 'decompress';
 import { createReadStream, createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import zlib from 'zlib';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import * as tarStream from 'tar-stream';
+
+// Define TarExtract class with proper typing
+interface TarHeader {
+  name: string;
+  type: string;
+}
+
+interface TarNext {
+  (err?: Error): void;
+}
+
+type TarExtractType = {
+  new(): tarStream.Extract;
+  prototype: tarStream.Extract;
+};
+
+const TarExtract = tarStream.extract as unknown as TarExtractType;
 import { logger } from './utils/logger.js';
 import * as fsUtils from './utils/fs.js';
 import { hashDependencyTree } from './utils/hash.js';
 import { cache } from './cache.js';
 import { Timer, createTimer } from './utils/timer.js';
 import { Spinner } from './utils/progress.js';
+import { ReliableProgress } from './utils/reliable-progress.js';
+import { performance } from 'perf_hooks';
 
 import {
   createSnapshotFingerprint,
@@ -259,68 +279,52 @@ export class Snapshot {
     try {
       // Start timer
       const timer = createTimer();
-      const startTime = Date.now();
-
-      // Very simple progress indicator
-      let dots = '';
-      const progressInterval = setInterval(() => {
-        dots = (dots.length >= 3) ? '' : dots + '.';
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        process.stdout.write(`\rRestoring from snapshot${dots.padEnd(3)} (${elapsed}s elapsed)${' '.repeat(20)}`);
-      }, 500);
+      const startTime = performance.now();
 
       // Get snapshot size for progress reporting
       const stats = await fs.stat(flashpackPath);
-      const snapshotSize = fsUtils.formatSize(stats.size);
+      const snapshotSize = stats.size;
+      const snapshotSizeFormatted = fsUtils.formatSize(snapshotSize);
 
-      // Update progress message
-      clearInterval(progressInterval);
-      process.stdout.write('\r' + ' '.repeat(80) + '\r');
-      process.stdout.write(`\rRestoring snapshot (${snapshotSize})...${' '.repeat(20)}`);
+      // Create progress indicator
+      const progress = new ReliableProgress('Restoring snapshot');
+      progress.start();
+      progress.updateStatus(`Preparing to restore snapshot (${snapshotSizeFormatted})`);
 
       // Remove existing node_modules if present
       if (await fsUtils.directoryExists(nodeModulesPath)) {
-        // Update progress message
-        clearInterval(progressInterval);
-        process.stdout.write('\r' + ' '.repeat(80) + '\r');
-        process.stdout.write(`\rRemoving existing node_modules...${' '.repeat(20)}`);
+        progress.updateStatus(`Removing existing node_modules...`);
         await fsUtils.remove(nodeModulesPath);
       }
 
-      // Extract archive using native tools for maximum speed
-      // Update progress message
-      clearInterval(progressInterval);
-      process.stdout.write('\r' + ' '.repeat(80) + '\r');
-      process.stdout.write(`\rExtracting snapshot...${' '.repeat(20)}`);
+      // Ensure project directory exists
+      await fsUtils.ensureDir(projectDir);
 
-      // Always use native tar for maximum speed
-      if (flashpackPath.endsWith('.tar.gz') || flashpackPath.endsWith('.tgz')) {
-        await fsUtils.ensureDir(projectDir);
-        execSync(`tar -xzf "${flashpackPath}" -C "${projectDir}"`, { stdio: 'ignore' });
-      }
-      // Use native unzip for zip files
-      else if (flashpackPath.endsWith('.zip')) {
-        await fsUtils.ensureDir(projectDir);
-        execSync(`unzip -q "${flashpackPath}" -d "${projectDir}"`, { stdio: 'ignore' });
-      }
-      // Fall back to decompress library for other formats
-      else {
-        // Try to use tar first
-        try {
-          await fsUtils.ensureDir(projectDir);
-          execSync(`tar -xf "${flashpackPath}" -C "${projectDir}"`, { stdio: 'ignore' });
-        } catch (error) {
-          // Fall back to decompress library
-          await decompress(flashpackPath, projectDir);
-        }
+      // Create node_modules directory
+      await fsUtils.ensureDir(nodeModulesPath);
+
+      // Determine extraction method based on file extension and available tools
+      const isNativeAvailable = this.isNativeExtractionAvailable(flashpackPath);
+
+      if (isNativeAvailable) {
+        // Use native extraction (fastest)
+        await this.extractWithNativeTools(flashpackPath, projectDir, progress);
+      } else {
+        // Use streaming extraction (memory efficient)
+        await this.extractWithStreaming(flashpackPath, projectDir, progress);
       }
 
       // Stop progress indicator
-      clearInterval(progressInterval);
-      process.stdout.write('\r' + ' '.repeat(80) + '\r');
+      progress.stop();
 
-      // Log success with timing information
+      // Calculate elapsed time
+      const endTime = performance.now();
+      const elapsedMs = endTime - startTime;
+      const extractionSpeed = snapshotSize / (elapsedMs / 1000); // bytes per second
+
+      // Log success with timing and speed information
       logger.success(`Restored node_modules from snapshot in ${timer.getElapsedFormatted()}`);
+      logger.info(`Extraction speed: ${fsUtils.formatSize(extractionSpeed)}/s`);
 
       // Get node_modules size if it exists
       if (await fsUtils.directoryExists(nodeModulesPath)) {
@@ -339,6 +343,244 @@ export class Snapshot {
     } catch (error) {
       logger.error(`Failed to restore snapshot: ${error}`);
       return false;
+    }
+  }
+
+  /**
+   * Check if native extraction tools are available for the given snapshot
+   * @param snapshotPath Path to the snapshot file
+   * @returns True if native extraction is available
+   */
+  private isNativeExtractionAvailable(snapshotPath: string): boolean {
+    // Check file extension
+    const isTarGz = snapshotPath.endsWith('.tar.gz') || snapshotPath.endsWith('.tgz');
+    const isZip = snapshotPath.endsWith('.zip');
+    const isTar = snapshotPath.endsWith('.tar');
+
+    if (!isTarGz && !isZip && !isTar) {
+      return false;
+    }
+
+    // Check if native tools are available
+    try {
+      if (isTarGz || isTar) {
+        execSync('tar --version', { stdio: 'ignore' });
+        return true;
+      } else if (isZip) {
+        execSync('unzip -v', { stdio: 'ignore' });
+        return true;
+      }
+    } catch (error) {
+      logger.debug(`Native extraction tools not available: ${error}`);
+      return false;
+    }
+
+    return false;
+  }
+
+  /**
+   * Extract snapshot using native tools (tar, unzip)
+   * @param snapshotPath Path to the snapshot file
+   * @param projectDir Project directory
+   * @param progress Progress indicator
+   */
+  private async extractWithNativeTools(
+    snapshotPath: string,
+    projectDir: string,
+    progress: ReliableProgress
+  ): Promise<void> {
+    progress.updateStatus(`Extracting with native tools...`);
+
+    // Use appropriate native tool based on file extension
+    if (snapshotPath.endsWith('.tar.gz') || snapshotPath.endsWith('.tgz')) {
+      // Use tar with progress monitoring
+      return new Promise((resolve, reject) => {
+        const process = spawn('tar', ['-xzf', snapshotPath, '-C', projectDir]);
+
+        process.on('error', (error) => {
+          logger.error(`Native extraction failed: ${error}`);
+          reject(error);
+        });
+
+        process.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`tar exited with code ${code}`));
+          }
+        });
+
+        // Update progress periodically
+        let dots = '';
+        const updateInterval = setInterval(() => {
+          dots = dots.length >= 3 ? '' : dots + '.';
+          progress.updateStatus(`Extracting with tar${dots}`);
+        }, 500);
+
+        // Clear interval when done
+        process.on('close', () => clearInterval(updateInterval));
+      });
+    } else if (snapshotPath.endsWith('.zip')) {
+      // Use unzip with progress monitoring
+      return new Promise((resolve, reject) => {
+        const process = spawn('unzip', ['-q', snapshotPath, '-d', projectDir]);
+
+        process.on('error', (error) => {
+          logger.error(`Native extraction failed: ${error}`);
+          reject(error);
+        });
+
+        process.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`unzip exited with code ${code}`));
+          }
+        });
+
+        // Update progress periodically
+        let dots = '';
+        const updateInterval = setInterval(() => {
+          dots = dots.length >= 3 ? '' : dots + '.';
+          progress.updateStatus(`Extracting with unzip${dots}`);
+        }, 500);
+
+        // Clear interval when done
+        process.on('close', () => clearInterval(updateInterval));
+      });
+    } else if (snapshotPath.endsWith('.tar')) {
+      // Use tar with progress monitoring
+      return new Promise((resolve, reject) => {
+        const process = spawn('tar', ['-xf', snapshotPath, '-C', projectDir]);
+
+        process.on('error', (error) => {
+          logger.error(`Native extraction failed: ${error}`);
+          reject(error);
+        });
+
+        process.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`tar exited with code ${code}`));
+          }
+        });
+
+        // Update progress periodically
+        let dots = '';
+        const updateInterval = setInterval(() => {
+          dots = dots.length >= 3 ? '' : dots + '.';
+          progress.updateStatus(`Extracting with tar${dots}`);
+        }, 500);
+
+        // Clear interval when done
+        process.on('close', () => clearInterval(updateInterval));
+      });
+    } else {
+      throw new Error(`Unsupported snapshot format for native extraction`);
+    }
+  }
+
+  /**
+   * Extract snapshot using streaming extraction (memory efficient)
+   * @param snapshotPath Path to the snapshot file
+   * @param projectDir Project directory
+   * @param progress Progress indicator
+   */
+  private async extractWithStreaming(
+    snapshotPath: string,
+    projectDir: string,
+    progress: ReliableProgress
+  ): Promise<void> {
+    progress.updateStatus(`Extracting with streaming...`);
+
+    // Get snapshot size for progress reporting
+    const stats = await fs.stat(snapshotPath);
+    const totalSize = stats.size;
+    let processedBytes = 0;
+
+    // Use appropriate streaming method based on file extension
+    if (snapshotPath.endsWith('.tar.gz') || snapshotPath.endsWith('.tgz')) {
+      // Create read stream for the snapshot
+      const readStream = createReadStream(snapshotPath);
+
+      // Create gunzip stream
+      const gunzip = zlib.createGunzip();
+
+      // Create tar extract stream
+      const extract = new TarExtract();
+
+      // Track progress
+      readStream.on('data', (chunk: Buffer) => {
+        processedBytes += chunk.length;
+        const percent = Math.round((processedBytes / totalSize) * 100);
+        progress.updateStatus(`Extracting: ${percent}% (${fsUtils.formatSize(processedBytes)}/${fsUtils.formatSize(totalSize)})`);
+      });
+
+      // Handle extracted entries
+      extract.on('entry', async (header: TarHeader, stream: NodeJS.ReadableStream, next: TarNext) => {
+        try {
+          // Get file path
+          const filePath = path.join(projectDir, header.name);
+
+          // Create directory if needed
+          if (header.type === 'directory') {
+            await fsUtils.ensureDir(filePath);
+            stream.resume();
+            next();
+            return;
+          }
+
+          // Ensure parent directory exists
+          await fsUtils.ensureDir(path.dirname(filePath));
+
+          // Create write stream
+          const writeStream = createWriteStream(filePath);
+
+          // Pipe data to file
+          stream.pipe(writeStream);
+
+          // Handle completion
+          writeStream.on('finish', () => {
+            next();
+          });
+
+          // Handle errors
+          writeStream.on('error', (error) => {
+            logger.error(`Failed to write file ${filePath}: ${error}`);
+            next(error);
+          });
+        } catch (error) {
+          logger.error(`Failed to process entry ${header.name}: ${error}`);
+          next(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+
+      // Handle extraction completion
+      extract.on('finish', () => {
+        progress.updateStatus(`Extraction complete`);
+      });
+
+      // Pipe streams together
+      await pipeline(readStream, gunzip, extract);
+    } else if (snapshotPath.endsWith('.zip')) {
+      // For zip files, we'll use the decompress library but with streaming options
+      progress.updateStatus(`Extracting zip archive...`);
+
+      // Use decompress with progress tracking
+      await decompress(snapshotPath, projectDir, {
+        filter: () => true,
+        map: (file) => {
+          processedBytes += file.data.length;
+          const percent = Math.min(99, Math.round((processedBytes / totalSize) * 100));
+          progress.updateStatus(`Extracting: ${percent}% (${fsUtils.formatSize(processedBytes)})`);
+          return file;
+        }
+      });
+    } else {
+      // For other formats, fall back to decompress
+      progress.updateStatus(`Extracting with decompress...`);
+      await decompress(snapshotPath, projectDir);
     }
   }
 
@@ -362,17 +604,12 @@ export class Snapshot {
     }
 
     try {
-      // Extract metadata only
-      const files = await decompress(flashpackPath, undefined, {
-        filter: file => file.path === '.flashpack-metadata.json'
-      });
+      // Get metadata using streaming extraction
+      const metadata = await this.getMetadata(flashpackPath);
 
-      if (files.length === 0) {
+      if (!metadata) {
         return false;
       }
-
-      // Parse metadata
-      const metadata = JSON.parse(files[0].data.toString());
 
       // Check if fingerprint exists
       if (metadata.fingerprint) {
@@ -405,27 +642,111 @@ export class Snapshot {
   }
 
   /**
-   * Get metadata from a snapshot
+   * Get metadata from a snapshot using streaming extraction
    * @param snapshotPath The snapshot path
    * @returns The snapshot metadata
    */
   async getMetadata(snapshotPath: string): Promise<any> {
     try {
-      // Extract metadata only
-      const files = await decompress(snapshotPath, undefined, {
-        filter: file => file.path === '.flashpack-metadata.json'
-      });
+      // Check file format
+      const isTarGz = snapshotPath.endsWith('.tar.gz') || snapshotPath.endsWith('.tgz');
+      const isZip = snapshotPath.endsWith('.zip');
 
-      if (files.length === 0) {
-        throw new Error('No metadata found in snapshot');
+      // Use streaming extraction for tar.gz files
+      if (isTarGz) {
+        return await this.getMetadataFromTarGz(snapshotPath);
       }
+      // For other formats, fall back to decompress
+      else {
+        // Extract metadata only
+        const files = await decompress(snapshotPath, undefined, {
+          filter: file => file.path === '.flashpack-metadata.json'
+        });
 
-      // Parse metadata
-      return JSON.parse(files[0].data.toString());
+        if (files.length === 0) {
+          throw new Error('No metadata found in snapshot');
+        }
+
+        // Parse metadata
+        return JSON.parse(files[0].data.toString());
+      }
     } catch (error) {
       logger.error(`Failed to get snapshot metadata: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Get metadata from a tar.gz snapshot using streaming extraction
+   * @param snapshotPath The snapshot path
+   * @returns The snapshot metadata
+   */
+  private async getMetadataFromTarGz(snapshotPath: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      // Create read stream for the snapshot
+      const readStream = createReadStream(snapshotPath);
+
+      // Create gunzip stream
+      const gunzip = zlib.createGunzip();
+
+      // Create tar extract stream
+      const extract = new TarExtract();
+
+      // Track if metadata was found
+      let metadataFound = false;
+
+      // Handle extracted entries
+      extract.on('entry', (header: TarHeader, stream: NodeJS.ReadableStream, next: TarNext) => {
+        // Check if this is the metadata file
+        if (header.name === '.flashpack-metadata.json') {
+          metadataFound = true;
+
+          // Collect data chunks
+          const chunks: Buffer[] = [];
+
+          stream.on('data', (chunk: Buffer) => {
+            chunks.push(chunk);
+          });
+
+          stream.on('end', () => {
+            try {
+              // Combine chunks and parse JSON
+              const data = Buffer.concat(chunks);
+              const metadata = JSON.parse(data.toString());
+
+              // End extraction early since we found what we needed
+              readStream.destroy();
+              gunzip.destroy();
+              extract.destroy();
+
+              resolve(metadata);
+            } catch (error) {
+              reject(error);
+            }
+          });
+        } else {
+          // Skip other files
+          stream.resume();
+        }
+
+        next();
+      });
+
+      // Handle extraction completion
+      extract.on('finish', () => {
+        if (!metadataFound) {
+          reject(new Error('No metadata found in snapshot'));
+        }
+      });
+
+      // Handle errors
+      readStream.on('error', reject);
+      gunzip.on('error', reject);
+      extract.on('error', reject);
+
+      // Pipe streams together
+      readStream.pipe(gunzip).pipe(extract);
+    });
   }
 }
 

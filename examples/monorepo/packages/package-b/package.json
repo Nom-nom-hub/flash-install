@@ -1,0 +1,16 @@
+{
+  "name": "package-b",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "package-a": "^1.0.0",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.0"
+  }
+}

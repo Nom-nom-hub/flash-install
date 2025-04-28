@@ -6,32 +6,41 @@ This document outlines the planned features and improvements for upcoming releas
 
 ### High Priority Features
 
-- [ ] **Improved Monorepo Support**
+- [x] **Improved Monorepo Support**
   - Enhanced workspace detection
   - Parallel installation across workspaces
   - Intelligent dependency hoisting
 
-- [ ] **Performance Optimizations**
+- [x] **Performance Optimizations**
   - Reduce memory usage during large installations
   - Optimize cache storage format
   - Implement streaming extraction for faster snapshot restoration
 
-- [ ] **Enhanced Offline Mode**
+- [x] **Enhanced Offline Mode**
   - Better detection of network availability
   - Fallback strategies for partial offline scenarios
   - Warning system for outdated dependencies when working offline
 
 ### Medium Priority Features
 
-- [ ] **Dependency Analysis Tools**
+- [x] **Dependency Analysis Tools**
   - Visualization of dependency graph
   - Detection of duplicate dependencies
-  - Identification of outdated or vulnerable packages
+  - Size analysis and reporting
+  - Multiple output formats (tree, DOT, Markdown)
+  - Customizable visualization options
 
-- [ ] **Cloud Cache Integration**
-  - Support for storing/retrieving cache from S3-compatible storage
-  - Team-shared caching for improved CI/CD performance
-  - Configurable cache synchronization policies
+- [x] **Cloud Cache Integration**
+  - [x] Support for storing/retrieving cache from S3-compatible storage
+  - [x] Team-shared caching for improved CI/CD performance
+  - [x] Configurable cache synchronization policies
+
+- [x] **Enhanced Cloud Cache Features**
+  - [x] Implement the NEWEST sync policy
+  - [x] Add support for additional cloud providers (Azure, GCP)
+  - [x] Add cache invalidation based on lockfile changes
+  - [x] Implement a sync command for manual cache synchronization
+  - [x] Add team permissions and access controls
 
 - [ ] **Enhanced Plugin System**
   - Additional lifecycle hooks
@@ -54,7 +63,7 @@ This document outlines the planned features and improvements for upcoming releas
 
 - **Language Support Beyond JavaScript**
   - Experimental support for other package ecosystems (Python, Ruby, etc.)
-  
+
 - **Enterprise Features**
   - Role-based access control for shared caches
   - Compliance reporting for dependencies

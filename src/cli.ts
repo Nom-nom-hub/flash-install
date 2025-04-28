@@ -13,6 +13,30 @@ import { cache } from './cache.js';
 import * as fsUtils from './utils/fs.js';
 import { sync, Sync } from './sync.js';
 import { pluginManager } from './plugin.js';
+import { NetworkStatus, networkManager } from './utils/network.js';
+import { Spinner } from './utils/progress.js';
+import { cloudCache, SyncPolicy, CloudCacheConfig } from './cloud/cloud-cache.js';
+import { CloudProgress } from './utils/cloud-progress.js';
+import { workspaceManager } from './workspace.js';
+
+/**
+ * Get colored network status
+ * @param status Network status
+ * @returns Colored status string
+ */
+function getNetworkStatusColor(status: NetworkStatus): string {
+  switch (status) {
+    case NetworkStatus.ONLINE:
+      return chalk.green(status);
+    case NetworkStatus.OFFLINE:
+      return chalk.red(status);
+    case NetworkStatus.PARTIAL:
+      return chalk.yellow(status);
+    case NetworkStatus.UNKNOWN:
+    default:
+      return chalk.gray(status);
+  }
+}
 
 // Get package version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -41,42 +65,215 @@ program
   .option('--save-dev', 'Save to devDependencies')
   .option('--save-exact', 'Save exact version')
   .option('--no-dev', 'Skip dev dependencies')
+  .option('-w, --workspace', 'Enable workspace support')
+  .option('--no-hoist', 'Disable dependency hoisting in workspaces')
+  .option('--no-parallel-workspaces', 'Disable parallel installation of workspace packages')
+  .option('--workspace-concurrency <number>', 'Number of concurrent workspace installations', '4')
+  .option('--workspace-filter <packages...>', 'Filter specific workspace packages')
+  .option('--no-network-check', 'Disable network availability check')
+  .option('--network-timeout <ms>', 'Network check timeout in milliseconds', '5000')
+  .option('--network-retries <number>', 'Number of retries for network operations', '2')
+  .option('--no-fallbacks', 'Disable fallbacks in offline mode')
+  .option('--no-outdated-warnings', 'Disable warnings about outdated dependencies in offline mode')
+  .option('--cloud-cache', 'Enable cloud cache integration')
+  .option('--cloud-provider <provider>', 'Cloud provider type (s3)', 's3')
+  .option('--cloud-region <region>', 'Cloud provider region')
+  .option('--cloud-endpoint <url>', 'Cloud provider endpoint URL')
+  .option('--cloud-bucket <name>', 'Cloud provider bucket name')
+  .option('--cloud-prefix <prefix>', 'Cloud provider prefix')
+  .option('--cloud-sync <policy>', 'Cloud sync policy (always-upload, always-download, upload-if-missing, download-if-missing, newest)', 'upload-if-missing')
+  .option('--team-id <id>', 'Team ID for shared caching')
+  .option('--team-token <token>', 'Team access token')
+  .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
+  .option('--team-restrict', 'Restrict access to team members only', false)
   .action(async (packages, options) => {
     try {
       const projectDir = process.cwd();
-      
+
       // If specific packages are provided, install them
       if (packages && packages.length > 0) {
         console.log(chalk.cyan(`
 ⚡ flash-install v${version}
         `));
-        
+
         console.log(chalk.cyan(`⚡ Installing packages: ${packages.join(', ')}`));
-        
+
+        // Configure workspace options
+        const workspaceOptions = options.workspace ? {
+          enabled: true,
+          hoistDependencies: options.hoist !== false,
+          parallelInstall: options.parallelWorkspaces !== false,
+          maxConcurrency: parseInt(options.workspaceConcurrency || '4', 10),
+          filter: options.workspaceFilter
+        } : undefined;
+
+        // Configure network options
+        const networkOptions = {
+          checkAvailability: options.networkCheck !== false,
+          timeout: parseInt(options.networkTimeout || '5000', 10),
+          retries: parseInt(options.networkRetries || '2', 10),
+          allowFallbacks: options.fallbacks !== false,
+          warnOutdated: options.outdatedWarnings !== false
+        };
+
+        // Configure cloud cache if enabled
+        let cloudCacheConfig: CloudCacheConfig | undefined;
+        if (options.cloudCache) {
+          if (!options.cloudBucket) {
+            console.log(chalk.yellow('⚠ Cloud cache enabled but no bucket specified. Use --cloud-bucket to specify a bucket.'));
+          } else {
+            // Map sync policy string to enum
+            let syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+            switch (options.cloudSync) {
+              case 'always-upload':
+                syncPolicy = SyncPolicy.ALWAYS_UPLOAD;
+                break;
+              case 'always-download':
+                syncPolicy = SyncPolicy.ALWAYS_DOWNLOAD;
+                break;
+              case 'upload-if-missing':
+                syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+                break;
+              case 'download-if-missing':
+                syncPolicy = SyncPolicy.DOWNLOAD_IF_MISSING;
+                break;
+              case 'newest':
+                syncPolicy = SyncPolicy.NEWEST;
+                break;
+            }
+
+            cloudCacheConfig = {
+              enabled: true,
+              provider: {
+                type: options.cloudProvider || 's3',
+                region: options.cloudRegion,
+                endpoint: options.cloudEndpoint,
+                bucket: options.cloudBucket,
+                prefix: options.cloudPrefix
+              },
+              syncPolicy,
+              localCacheDir: cache.cacheDir,
+              teamId: options.teamId,
+              teamAccess: options.teamId ? {
+                token: options.teamToken,
+                level: options.teamAccessLevel as 'read' | 'write' | 'admin',
+                restrictToTeam: options.teamRestrict
+              } : undefined
+            };
+
+            console.log(chalk.cyan(`→ Cloud cache enabled with ${options.cloudProvider} provider`));
+          }
+        }
+
         const installer = new Installer({
-          concurrency: options.concurrency,
+          concurrency: parseInt(options.concurrency, 10),
           packageManager: options.packageManager,
           includeDevDependencies: options.dev !== false,
           useCache: options.cache !== false,
           offline: options.offline || false,
-          registry: options.registry
+          registry: options.registry,
+          workspace: workspaceOptions,
+          network: networkOptions,
+          cloud: cloudCacheConfig
         });
-        
+
         await installer.init();
         const success = await installer.installPackages(
-          process.cwd(), 
-          packages, 
+          process.cwd(),
+          packages,
           {
             saveToDependencies: options.save || (!options.saveDev && options.saveExact) || (!options.saveDev && !options.save),
             saveToDevDependencies: options.saveDev,
             saveExact: options.saveExact
           }
         );
-        
+
         process.exit(success ? 0 : 1);
       } else {
-        // Original code for installing all dependencies
-        // ...
+        // Configure workspace options
+        const workspaceOptions = options.workspace ? {
+          enabled: true,
+          hoistDependencies: options.hoist !== false,
+          parallelInstall: options.parallelWorkspaces !== false,
+          maxConcurrency: parseInt(options.workspaceConcurrency || '4', 10),
+          filter: options.workspaceFilter
+        } : undefined;
+
+        // Configure network options
+        const networkOptions = {
+          checkAvailability: options.networkCheck !== false,
+          timeout: parseInt(options.networkTimeout || '5000', 10),
+          retries: parseInt(options.networkRetries || '2', 10),
+          allowFallbacks: options.fallbacks !== false,
+          warnOutdated: options.outdatedWarnings !== false
+        };
+
+        // Configure cloud cache if enabled
+        let cloudCacheConfig: CloudCacheConfig | undefined;
+        if (options.cloudCache) {
+          if (!options.cloudBucket) {
+            console.log(chalk.yellow('⚠ Cloud cache enabled but no bucket specified. Use --cloud-bucket to specify a bucket.'));
+          } else {
+            // Map sync policy string to enum
+            let syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+            switch (options.cloudSync) {
+              case 'always-upload':
+                syncPolicy = SyncPolicy.ALWAYS_UPLOAD;
+                break;
+              case 'always-download':
+                syncPolicy = SyncPolicy.ALWAYS_DOWNLOAD;
+                break;
+              case 'upload-if-missing':
+                syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+                break;
+              case 'download-if-missing':
+                syncPolicy = SyncPolicy.DOWNLOAD_IF_MISSING;
+                break;
+              case 'newest':
+                syncPolicy = SyncPolicy.NEWEST;
+                break;
+            }
+
+            cloudCacheConfig = {
+              enabled: true,
+              provider: {
+                type: options.cloudProvider || 's3',
+                region: options.cloudRegion,
+                endpoint: options.cloudEndpoint,
+                bucket: options.cloudBucket,
+                prefix: options.cloudPrefix
+              },
+              syncPolicy,
+              localCacheDir: cache.cacheDir,
+              teamId: options.teamId,
+              teamAccess: options.teamId ? {
+                token: options.teamToken,
+                level: options.teamAccessLevel as 'read' | 'write' | 'admin',
+                restrictToTeam: options.teamRestrict
+              } : undefined
+            };
+
+            console.log(chalk.cyan(`→ Cloud cache enabled with ${options.cloudProvider} provider`));
+          }
+        }
+
+        // Install all dependencies
+        const customInstaller = new Installer({
+          concurrency: parseInt(options.concurrency, 10),
+          packageManager: options.packageManager,
+          includeDevDependencies: options.dev !== false,
+          useCache: options.cache !== false,
+          offline: options.offline || false,
+          registry: options.registry,
+          workspace: workspaceOptions,
+          network: networkOptions,
+          cloud: cloudCacheConfig
+        });
+
+        await customInstaller.init();
+        const success = await customInstaller.install(projectDir);
+
+        process.exit(success ? 0 : 1);
       }
     } catch (error) {
       console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
@@ -295,8 +492,82 @@ program
     }
   });
 
-// Cache info command
+// Cloud sync command
 program
+  .command('cloud-sync')
+  .description('Synchronize cache with cloud storage')
+  .option('-d, --direction <direction>', 'Sync direction (upload, download, both)', 'both')
+  .option('-f, --force', 'Force synchronization even if files exist', false)
+  .option('--cloud-provider <provider>', 'Cloud provider type (s3, azure, gcp)', 's3')
+  .option('--cloud-region <region>', 'Cloud provider region')
+  .option('--cloud-endpoint <url>', 'Cloud provider endpoint URL')
+  .option('--cloud-bucket <n>', 'Cloud provider bucket name')
+  .option('--cloud-prefix <prefix>', 'Cloud provider prefix')
+  .option('--team-id <id>', 'Team ID for shared caching')
+  .option('--team-token <token>', 'Team access token')
+  .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
+  .option('--team-restrict', 'Restrict access to team members only', false)
+  .action(async (options) => {
+    try {
+      console.log(chalk.cyan(`
+⚡ flash-install cloud-sync v${version}
+      `));
+
+      if (!options.cloudBucket) {
+        console.log(chalk.red('Error: Cloud bucket is required. Use --cloud-bucket to specify a bucket.'));
+        process.exit(1);
+      }
+
+      // Validate direction
+      if (!['upload', 'download', 'both'].includes(options.direction)) {
+        console.log(chalk.red(`Error: Invalid direction: ${options.direction}. Must be one of: upload, download, both.`));
+        process.exit(1);
+      }
+
+      // Initialize cache
+      await cache.init();
+
+      // Configure cloud cache
+      const cloudCacheConfig: CloudCacheConfig = {
+        enabled: true,
+        provider: {
+          type: options.cloudProvider || 's3',
+          region: options.cloudRegion,
+          endpoint: options.cloudEndpoint,
+          bucket: options.cloudBucket,
+          prefix: options.cloudPrefix
+        },
+        syncPolicy: SyncPolicy.NEWEST,
+        localCacheDir: cache.cacheDir,
+        teamId: options.teamId,
+        teamAccess: options.teamId ? {
+          token: options.teamToken,
+          level: options.teamAccessLevel as 'read' | 'write' | 'admin',
+          restrictToTeam: options.teamRestrict
+        } : undefined
+      };
+
+      // Initialize cloud cache
+      await cloudCache.init(cloudCacheConfig);
+
+      // Sync cache
+      console.log(chalk.cyan(`→ Synchronizing cache with ${options.cloudProvider} (${options.direction})`));
+      const success = await cloudCache.syncCache(options.direction as 'upload' | 'download' | 'both', options.force);
+
+      if (!success) {
+        console.log(chalk.red('Error: Failed to synchronize cache with cloud.'));
+        process.exit(1);
+      }
+
+      console.log(chalk.green('✓ Cache synchronized successfully with cloud.'));
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+      process.exit(1);
+    }
+  });
+
+// Cache info command
+const cacheCommand = program
   .command('cache')
   .description('Show cache information')
   .option('-v, --verify', 'Verify cache integrity', false)
@@ -332,6 +603,548 @@ program
 
     console.log(`Average entry size: ${fsUtils.formatSize(stats.avgSize)}`);
     console.log(`Cache location: ${cache.cacheDir}`);
+  });
+
+// Cloud cache commands
+cacheCommand
+  .command('cloud')
+  .description('Configure cloud cache')
+  .option('-p, --provider <provider>', 'Cloud provider (s3)', 's3')
+  .option('-e, --endpoint <endpoint>', 'Provider endpoint URL')
+  .option('-r, --region <region>', 'Provider region', 'us-east-1')
+  .option('-b, --bucket <bucket>', 'Provider bucket name')
+  .option('--prefix <prefix>', 'Provider bucket prefix')
+  .option('-t, --team <team>', 'Team ID for shared caching')
+  .option('-s, --sync-policy <policy>', 'Synchronization policy', 'upload-if-missing')
+  .option('--disable', 'Disable cloud cache')
+  .option('--enable', 'Enable cloud cache')
+  .option('--test', 'Test cloud cache configuration')
+  .action(async (options) => {
+    try {
+      // Initialize cache
+      await cache.init();
+
+      // Get current cloud config
+      const currentConfig = cache.getOptions().cloud;
+
+      // Determine if we're enabling or disabling
+      const enabled = options.enable || (!options.disable && (currentConfig?.enabled ?? false));
+
+      // Parse sync policy
+      let syncPolicy: SyncPolicy;
+      switch (options.syncPolicy) {
+        case 'always-upload':
+          syncPolicy = SyncPolicy.ALWAYS_UPLOAD;
+          break;
+        case 'always-download':
+          syncPolicy = SyncPolicy.ALWAYS_DOWNLOAD;
+          break;
+        case 'upload-if-missing':
+          syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+          break;
+        case 'download-if-missing':
+          syncPolicy = SyncPolicy.DOWNLOAD_IF_MISSING;
+          break;
+        case 'newest':
+          syncPolicy = SyncPolicy.NEWEST;
+          break;
+        default:
+          syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
+      }
+
+      // Create cloud config
+      const cloudConfig: CloudCacheConfig = {
+        enabled,
+        syncPolicy,
+        localCacheDir: cache.cacheDir,
+        teamId: options.team || currentConfig?.teamId,
+        provider: {
+          type: options.provider || currentConfig?.provider?.type || 's3',
+          endpoint: options.endpoint || currentConfig?.provider?.endpoint,
+          region: options.region || currentConfig?.provider?.region || 'us-east-1',
+          bucket: options.bucket || currentConfig?.provider?.bucket || '',
+          prefix: options.prefix || currentConfig?.provider?.prefix || '',
+          credentials: currentConfig?.provider?.credentials
+        }
+      };
+
+      // Validate config
+      if (enabled && !cloudConfig.provider.bucket) {
+        logger.error('Bucket name is required for cloud cache');
+        process.exit(1);
+      }
+
+      // Update cache options
+      cache.setOptions({
+        ...cache.getOptions(),
+        cloud: cloudConfig
+      });
+
+      // Initialize cloud cache
+      if (enabled) {
+        try {
+          await cloudCache.init(cloudConfig);
+          logger.success('Cloud cache configured successfully');
+
+          // Test connection if requested
+          if (options.test) {
+            logger.info('Testing cloud cache connection...');
+
+            // Create test file
+            const testDir = path.join(os.tmpdir(), `flash-install-${Date.now()}`);
+            await fsUtils.ensureDir(testDir);
+            const testFile = path.join(testDir, 'test.txt');
+            await fs.writeFile(testFile, 'Test file for flash-install cloud cache');
+
+            // Upload test file
+            await cloudCache.getProvider().uploadFile(testFile, 'test.txt');
+            logger.success('Successfully uploaded test file to cloud cache');
+
+            // Download test file
+            const downloadFile = path.join(testDir, 'test-download.txt');
+            await cloudCache.getProvider().downloadFile('test.txt', downloadFile);
+            logger.success('Successfully downloaded test file from cloud cache');
+
+            // Delete test file
+            await cloudCache.getProvider().deleteFile('test.txt');
+            logger.success('Successfully deleted test file from cloud cache');
+
+            // Clean up
+            await fsUtils.remove(testDir);
+
+            logger.success('Cloud cache test completed successfully');
+          }
+        } catch (error) {
+          logger.error(`Failed to initialize cloud cache: ${error}`);
+          process.exit(1);
+        }
+      } else {
+        logger.info('Cloud cache is disabled');
+      }
+
+      // Save configuration
+      await cache.saveConfig();
+
+    } catch (error) {
+      logger.error(`Failed to configure cloud cache: ${error}`);
+      process.exit(1);
+    }
+  });
+
+cacheCommand
+  .command('cloud-sync')
+  .description('Synchronize with cloud cache')
+  .option('-d, --direction <direction>', 'Sync direction (upload, download, both)', 'both')
+  .option('-f, --force', 'Force synchronization', false)
+  .action(async (options) => {
+    try {
+      // Initialize cache
+      await cache.init();
+
+      // Check if cloud cache is enabled
+      if (!cache.getOptions().cloud?.enabled) {
+        logger.error('Cloud cache is not enabled');
+        process.exit(1);
+      }
+
+      // Initialize cloud cache
+      await cloudCache.init(cache.getOptions().cloud!);
+
+      // Create progress indicator
+      const progress = new CloudProgress('Synchronizing with cloud cache');
+      progress.start();
+
+      // Get all cache entries
+      const entries = Array.from(cache.getMetadata().entries());
+
+      // Filter entries
+      const packages: [string, string][] = [];
+      const trees: [Record<string, string>, string][] = [];
+
+      for (const [hash, entry] of entries) {
+        if (entry.name === 'tree') {
+          // This is a dependency tree
+          // We need to reconstruct the dependencies
+          const dependencies = cache.getDependenciesFromHash(hash);
+          if (dependencies) {
+            const treePath = cache.getDependencyTreePath(dependencies);
+            trees.push([dependencies, treePath]);
+          }
+        } else {
+          // This is a package
+          const packagePath = cache.getPackagePath(entry.name, entry.version);
+          packages.push([entry.name, entry.version]);
+        }
+      }
+
+      // Synchronize packages
+      if (options.direction === 'upload' || options.direction === 'both') {
+        progress.updateStatus(`Uploading ${packages.length} packages to cloud cache...`);
+
+        let uploaded = 0;
+        for (const [name, version] of packages) {
+          try {
+            const packagePath = cache.getPackagePath(name, version);
+            await cloudCache.syncPackage(name, version, packagePath);
+            uploaded++;
+            progress.updateStatus(`Uploaded ${uploaded}/${packages.length} packages`);
+          } catch (error) {
+            logger.warn(`Failed to upload package ${name}@${version}: ${error}`);
+          }
+        }
+
+        logger.success(`Uploaded ${uploaded}/${packages.length} packages to cloud cache`);
+      }
+
+      // Synchronize dependency trees
+      if (options.direction === 'upload' || options.direction === 'both') {
+        progress.updateStatus(`Uploading ${trees.length} dependency trees to cloud cache...`);
+
+        let uploaded = 0;
+        for (const [dependencies, treePath] of trees) {
+          try {
+            await cloudCache.syncDependencyTree(dependencies, treePath);
+            uploaded++;
+            progress.updateStatus(`Uploaded ${uploaded}/${trees.length} dependency trees`);
+          } catch (error) {
+            logger.warn(`Failed to upload dependency tree: ${error}`);
+          }
+        }
+
+        logger.success(`Uploaded ${uploaded}/${trees.length} dependency trees to cloud cache`);
+      }
+
+      // Download from cloud cache
+      if (options.direction === 'download' || options.direction === 'both') {
+        progress.updateStatus('Downloading from cloud cache...');
+
+        // List files in cloud cache
+        const cloudFiles = await cloudCache.getProvider().listFiles();
+
+        // Filter package files
+        const packageFiles = cloudFiles.filter(file => file.startsWith('packages/'));
+        const treeFiles = cloudFiles.filter(file => file.startsWith('trees/'));
+
+        logger.info(`Found ${packageFiles.length} packages and ${treeFiles.length} dependency trees in cloud cache`);
+
+        // TODO: Implement download logic
+
+        logger.success('Downloaded cache entries from cloud cache');
+      }
+
+      progress.stop();
+
+    } catch (error) {
+      logger.error(`Failed to synchronize with cloud cache: ${error}`);
+      process.exit(1);
+    }
+  });
+
+// Network command
+program
+  .command('network')
+  .description('Check network status')
+  .option('--registry <url>', 'Specify npm registry URL')
+  .option('--timeout <ms>', 'Network check timeout in milliseconds', '5000')
+  .option('--retries <number>', 'Number of retries for network operations', '2')
+  .action(async (options) => {
+    try {
+      console.log(chalk.cyan(`\n⚡ Flash Install Network Check\n`));
+
+      // Create spinner
+      const spinner = new Spinner('Checking network status');
+      spinner.start();
+
+      // Check network
+      const result = await networkManager.checkNetwork({
+        registry: options.registry,
+        timeout: parseInt(options.timeout, 10),
+        retries: parseInt(options.retries, 10)
+      });
+
+      // Stop spinner
+      spinner.stop();
+
+      // Display results
+      console.log(chalk.bold(`Network Status: ${getNetworkStatusColor(result.status)}`));
+      console.log(`DNS Resolution: ${result.dnsAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+      console.log(`Registry: ${result.registryAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+      console.log(`Internet: ${result.internetAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+
+      if (result.responseTime) {
+        console.log(`Response Time: ${Math.round(result.responseTime)}ms`);
+      }
+
+      if (result.error) {
+        console.log(chalk.red(`Error: ${result.error}`));
+      }
+
+      // Provide recommendations
+      console.log('\nRecommendations:');
+
+      if (result.status === NetworkStatus.ONLINE) {
+        console.log(chalk.green('✓ Network is fully available, all features should work normally'));
+      } else if (result.status === NetworkStatus.OFFLINE) {
+        console.log(chalk.yellow('⚠ Network is offline, use the following options:'));
+        console.log(chalk.yellow('  - Use --offline flag to enable offline mode'));
+        console.log(chalk.yellow('  - Ensure you have a cache or snapshot available'));
+      } else if (result.status === NetworkStatus.PARTIAL) {
+        console.log(chalk.yellow('⚠ Network is partially available, use the following options:'));
+
+        if (!result.registryAvailable) {
+          console.log(chalk.yellow('  - Use --offline flag to enable offline mode with fallbacks'));
+          console.log(chalk.yellow('  - Try a different registry with --registry <url>'));
+        }
+
+        if (!result.dnsAvailable) {
+          console.log(chalk.yellow('  - Check your DNS settings'));
+          console.log(chalk.yellow('  - Try using a specific IP address for the registry'));
+        }
+      }
+    } catch (error) {
+      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// Analysis command
+program
+  .command('analyze')
+  .description('Analyze dependencies and show statistics')
+  .argument('[dir]', 'Project directory', '.')
+  .option('--no-dev', 'Exclude dev dependencies')
+  .option('--direct-only', 'Show only direct dependencies')
+  .option('--max-depth <depth>', 'Maximum depth to analyze')
+  .option('--no-duplicates', 'Hide duplicate dependencies')
+  .option('--no-sizes', 'Hide dependency sizes')
+  .action(async (dir, options) => {
+    try {
+      // Import dependency analyzer
+      const { DependencyAnalyzer } = await import('./analysis.js');
+
+      // Create analyzer
+      const analyzer = new DependencyAnalyzer({
+        includeDevDependencies: options.dev !== false,
+        directOnly: options.directOnly || false,
+        maxDepth: options.maxDepth ? parseInt(options.maxDepth, 10) : undefined,
+        showDuplicates: options.duplicates !== false,
+        showSizes: options.sizes !== false
+      });
+
+      // Resolve project directory
+      const projectDir = path.resolve(dir);
+
+      // Check if directory exists
+      if (!await fsUtils.directoryExists(projectDir)) {
+        logger.error(`Directory not found: ${projectDir}`);
+        process.exit(1);
+      }
+
+      console.log(chalk.cyan(`\n⚡ Flash Install Dependency Analysis\n`));
+
+      // Create spinner
+      const spinner = new Spinner('Analyzing dependencies');
+      spinner.start();
+
+      // Analyze dependencies
+      const result = await analyzer.analyze(projectDir);
+
+      // Stop spinner
+      spinner.stop();
+
+      // Display results
+      console.log(chalk.bold(`Dependency Statistics:`));
+      console.log(`Total dependencies: ${result.dependencyCount}`);
+      console.log(`Unique packages: ${result.uniquePackages}`);
+
+      if (result.duplicatePackages > 0) {
+        console.log(`Duplicate packages: ${result.duplicatePackages}`);
+      }
+
+      console.log(`Total size: ${fsUtils.formatSize(result.totalSize)}`);
+
+      // Show largest dependencies
+      if (result.largestDependencies.length > 0) {
+        console.log(chalk.bold(`\nLargest Dependencies:`));
+
+        for (const dep of result.largestDependencies) {
+          if (dep.size !== undefined) {
+            console.log(`${dep.name}@${dep.version}: ${fsUtils.formatSize(dep.size)}`);
+          }
+        }
+      }
+
+      // Show most duplicated dependencies
+      if (result.mostDuplicated.length > 0) {
+        console.log(chalk.bold(`\nMost Duplicated Dependencies:`));
+
+        for (const dep of result.mostDuplicated) {
+          console.log(`${dep.name}: ${dep.count} instances`);
+        }
+      }
+
+      console.log(chalk.cyan(`\nUse 'flash-install analyze --help' for more options`));
+    } catch (error) {
+      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// Dependency tree visualization command
+program
+  .command('deps')
+  .description('Visualize dependency tree')
+  .argument('[dir]', 'Project directory', '.')
+  .option('--no-dev', 'Exclude dev dependencies')
+  .option('--direct-only', 'Show only direct dependencies')
+  .option('--max-depth <depth>', 'Maximum depth to visualize')
+  .option('--no-sizes', 'Hide dependency sizes')
+  .option('--no-versions', 'Hide dependency versions')
+  .option('--no-colors', 'Disable colors')
+  .option('-f, --format <format>', 'Output format (tree, dot, markdown)', 'tree')
+  .option('-o, --output <file>', 'Output file')
+  .action(async (dir, options) => {
+    try {
+      // Import dependency analyzer and visualization
+      const { DependencyAnalyzer } = await import('./analysis.js');
+      const { generateDependencyTree, generateDependencyGraph, generateDependencyReport } = await import('./utils/visualization.js');
+
+      // Create analyzer
+      const analyzer = new DependencyAnalyzer({
+        includeDevDependencies: options.dev !== false,
+        directOnly: options.directOnly || false,
+        maxDepth: options.maxDepth ? parseInt(options.maxDepth, 10) : undefined,
+        showSizes: options.sizes !== false
+      });
+
+      // Resolve project directory
+      const projectDir = path.resolve(dir);
+
+      // Check if directory exists
+      if (!await fsUtils.directoryExists(projectDir)) {
+        logger.error(`Directory not found: ${projectDir}`);
+        process.exit(1);
+      }
+
+      console.log(chalk.cyan(`\n⚡ Flash Install Dependency Visualization\n`));
+
+      // Create spinner
+      const spinner = new Spinner('Analyzing dependencies');
+      spinner.start();
+
+      // Analyze dependencies
+      const result = await analyzer.analyze(projectDir);
+
+      // Stop spinner
+      spinner.stop();
+
+      // Generate visualization
+      let output = '';
+      const visualizationOptions = {
+        showSizes: options.sizes !== false,
+        showVersions: options.versions !== false,
+        maxDepth: options.maxDepth ? parseInt(options.maxDepth, 10) : undefined,
+        useColors: options.colors !== false
+      };
+
+      switch (options.format.toLowerCase()) {
+        case 'tree':
+          output = generateDependencyTree(result.dependencies, visualizationOptions);
+          break;
+        case 'dot':
+          output = generateDependencyGraph(result.dependencies, visualizationOptions);
+          break;
+        case 'markdown':
+        case 'md':
+          output = generateDependencyReport(result.dependencies, visualizationOptions);
+          break;
+        default:
+          logger.error(`Unsupported format: ${options.format}`);
+          process.exit(1);
+      }
+
+      // Output result
+      if (options.output) {
+        // Write to file
+        const outputPath = path.resolve(options.output);
+        await fs.writeFile(outputPath, output);
+        console.log(chalk.green(`Dependency visualization saved to ${outputPath}`));
+      } else {
+        // Print to console
+        console.log(output);
+      }
+    } catch (error) {
+      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// Workspace command
+program
+  .command('workspaces')
+  .description('List workspace packages')
+  .argument('[dir]', 'Project directory', '.')
+  .action(async (dir) => {
+    try {
+      // Resolve project directory
+      const projectDir = path.resolve(dir);
+
+      // Check if directory exists
+      if (!await fsUtils.directoryExists(projectDir)) {
+        logger.error(`Directory not found: ${projectDir}`);
+        process.exit(1);
+      }
+
+      // Initialize workspace manager
+      const hasWorkspaces = await workspaceManager.init(projectDir);
+
+      if (!hasWorkspaces) {
+        logger.error('No workspaces found in this project');
+        process.exit(1);
+      }
+
+      // Get workspace packages
+      const packages = workspaceManager.getPackages();
+
+      console.log(chalk.cyan(`\n⚡ Flash Install Workspaces\n`));
+      console.log(chalk.cyan(`Found ${chalk.bold(packages.length.toString())} workspace packages:\n`));
+
+      // Get dependency graph
+      const graph = workspaceManager.buildDependencyGraph();
+
+      // Display packages
+      for (const pkg of packages) {
+        console.log(chalk.bold(`${pkg.name}@${pkg.version}`));
+        console.log(chalk.gray(`  Location: ${path.relative(projectDir, pkg.directory)}`));
+
+        // Show dependencies
+        const deps = Object.keys(pkg.dependencies).filter(dep => workspaceManager.getPackage(dep));
+        if (deps.length > 0) {
+          console.log(chalk.gray(`  Workspace dependencies: ${deps.join(', ')}`));
+        }
+
+        // Show dependents
+        const dependents: string[] = [];
+        for (const [pkgName, dependencies] of graph.entries()) {
+          if (dependencies.includes(pkg.name)) {
+            dependents.push(pkgName);
+          }
+        }
+
+        if (dependents.length > 0) {
+          console.log(chalk.gray(`  Used by: ${dependents.join(', ')}`));
+        }
+
+        console.log('');
+      }
+
+      // Show installation order
+      const installOrder = workspaceManager.getInstallationOrder();
+      console.log(chalk.cyan(`Installation order: ${installOrder.join(' → ')}`));
+    } catch (error) {
+      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
   });
 
 // Plugin commands
@@ -393,6 +1206,68 @@ pluginCommand
     }
   });
 
+// Add command
+program
+  .command('add')
+  .description('Install and save packages to dependencies')
+  .argument('<packages...>', 'Packages to install (e.g., express react)')
+  .option('-D, --save-dev', 'Save to devDependencies')
+  .option('-E, --save-exact', 'Save exact version')
+  .option('-p, --package-manager <manager>', 'Package manager to use (npm, yarn, pnpm)')
+  .option('--no-cache', 'Disable cache')
+  .option('--offline', 'Use offline mode')
+  .option('--registry <url>', 'Specify npm registry URL')
+  .action(async (packages, options) => {
+    try {
+      console.log(chalk.cyan(`
+⚡ flash-install v${version}
+        `));
+
+      console.log(chalk.cyan(`⚡ Installing packages: ${packages.join(', ')}`));
+      console.log(`Install options: ${JSON.stringify({
+        saveToDependencies: !options.saveDev,
+        saveToDevDependencies: options.saveDev,
+        saveExact: options.saveExact
+      })}`);
+
+      if (options.saveDev) {
+        console.log(`Will save to dependencies: false`);
+        console.log(`Will save to devDependencies: true`);
+      } else {
+        console.log(`Will save to dependencies: true`);
+        console.log(`Will save to devDependencies: undefined`);
+      }
+
+      console.log(`Will save exact version: ${options.saveExact ? 'true' : 'undefined'}`);
+
+      // Configure installer
+      const customInstaller = new Installer({
+        packageManager: options.packageManager,
+        useCache: options.cache !== false,
+        offline: options.offline || false,
+        registry: options.registry
+      });
+
+      await customInstaller.init();
+
+      // Install packages
+      const success = await customInstaller.installPackages(
+        process.cwd(),
+        packages,
+        {
+          saveToDependencies: !options.saveDev,
+          saveToDevDependencies: options.saveDev,
+          saveExact: options.saveExact
+        }
+      );
+
+      process.exit(success ? 0 : 1);
+    } catch (error) {
+      logger.error(`Failed to install packages: ${error}`);
+      process.exit(1);
+    }
+  });
+
 // Download command
 program
   .command('download')
@@ -406,13 +1281,13 @@ program
       const customInstaller = new Installer({
         registry: options.registry
       });
-      
+
       await customInstaller.init();
-      
+
       // Download package
       logger.flash(`Downloading package ${chalk.bold(packageName)}`);
       const outputPath = await customInstaller.downloadPackage(packageName, options.output);
-      
+
       logger.success(`Package downloaded to: ${outputPath}`);
     } catch (error) {
       logger.error(`Failed to download package: ${error}`);

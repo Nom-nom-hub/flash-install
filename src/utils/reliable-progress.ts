@@ -31,14 +31,19 @@ export class ReliableProgress {
 
     this.interval = setInterval(() => {
       const frame = this.frames[this.frameIndex];
-      const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(1);
-      
+      const elapsed = Math.max(0.1, (Date.now() - this.startTime) / 1000);
+      const elapsedText = elapsed.toFixed(1);
+
       // Clear line and move cursor to beginning
-      process.stdout.write('\r' + ' '.repeat(80) + '\r');
-      
-      // Write progress
-      process.stdout.write(`${chalk.cyan(frame)} ${this.message} (${elapsed}s elapsed) ${this.status}`);
-      
+      process.stdout.write('\r' + ' '.repeat(100) + '\r');
+
+      // Write progress with npm-style formatting
+      if (this.status) {
+        process.stdout.write(`${chalk.cyan(frame)} ${this.message} ${chalk.gray(`(${elapsedText}s)`)} - ${this.status}`);
+      } else {
+        process.stdout.write(`${chalk.cyan(frame)} ${this.message} ${chalk.gray(`(${elapsedText}s)`)}`);
+      }
+
       this.frameIndex = (this.frameIndex + 1) % this.frames.length;
     }, 80);
   }
@@ -58,9 +63,14 @@ export class ReliableProgress {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
-      
+
       // Clear line
-      process.stdout.write('\r' + ' '.repeat(80) + '\r');
+      process.stdout.write('\r' + ' '.repeat(100) + '\r');
+
+      // Add a newline for better readability
+      if (!this.completed) {
+        console.log('');
+      }
     }
   }
 
@@ -68,23 +78,27 @@ export class ReliableProgress {
    * Complete the progress
    * @param message Completion message
    */
-  complete(message: string): void {
+  complete(message: string = ''): void {
     if (this.completed) {
       return;
     }
-    
-    this.stop();
+
     this.completed = true;
-    
+    this.stop();
+
     // Calculate elapsed time
-    const elapsed = (Date.now() - this.startTime) / 1000;
+    const elapsed = Math.max(0.1, (Date.now() - this.startTime) / 1000);
     let elapsedText = '';
     if (elapsed < 60) {
-      elapsedText = `${Math.round(elapsed)}s`;
+      elapsedText = `${elapsed.toFixed(1)}s`;
     } else {
-      elapsedText = `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`;
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = Math.round(elapsed % 60);
+      elapsedText = `${minutes}m ${seconds}s`;
     }
-    
-    console.log(`${chalk.green('✓')} ${message} in ${chalk.bold(elapsedText)}`);
+
+    // Use the provided message or default to the progress message
+    const completionMessage = message || `${this.message} completed`;
+    console.log(`${chalk.green('✓')} ${completionMessage} in ${chalk.bold(elapsedText)}`);
   }
 }

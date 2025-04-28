@@ -90,49 +90,62 @@ export class CliProgress {
    * Render progress to console
    */
   private renderProgress(): void {
-    const percent = Math.round((this.current / this.total) * 100);
-    const elapsed = (Date.now() - this.startTime) / 1000;
-    
-    // Calculate speed
-    const speed = this.current / Math.max(1, elapsed);
-    
+    const percent = Math.min(100, Math.round((this.current / this.total) * 100));
+    const elapsed = Math.max(0.1, (Date.now() - this.startTime) / 1000);
+
+    // Calculate speed with safety checks
+    const speed = Math.max(0, Math.min(1000, this.current / elapsed));
+
     // Calculate ETA
     let etaText = 'calculating...';
-    if (this.current > 0) {
-      const remaining = this.total - this.current;
+    if (this.current > 0 && speed > 0) {
+      const remaining = Math.max(0, this.total - this.current);
       const eta = remaining / speed;
-      
+
       if (eta < 60) {
-        etaText = `${Math.round(eta)}s`;
+        etaText = `${Math.ceil(eta)}s`;
       } else {
-        etaText = `${Math.floor(eta / 60)}m ${Math.round(eta % 60)}s`;
+        const minutes = Math.floor(eta / 60);
+        const seconds = Math.ceil(eta % 60);
+        etaText = `${minutes}m ${seconds}s`;
       }
     }
-    
+
     // Format elapsed time
     let elapsedText = '';
     if (elapsed < 60) {
       elapsedText = `${Math.round(elapsed)}s`;
     } else {
-      elapsedText = `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`;
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = Math.round(elapsed % 60);
+      elapsedText = `${minutes}m ${seconds}s`;
     }
-    
+
+    // Create progress bar (npm-style)
+    const barWidth = 30;
+    const completeWidth = Math.floor((percent / 100) * barWidth);
+    const incompleteWidth = barWidth - completeWidth;
+
+    const bar =
+      chalk.green('█'.repeat(completeWidth)) +
+      chalk.gray('░'.repeat(incompleteWidth));
+
     // Clear line
-    process.stdout.write('\r' + ' '.repeat(80) + '\r');
-    
-    // Write progress line
+    process.stdout.write('\r' + ' '.repeat(100) + '\r');
+
+    // Write progress line (npm-style)
     process.stdout.write(
-      `${chalk.cyan('→')} ${this.message}: ${chalk.bold(`${this.current}/${this.total}`)} ` +
-      `(${percent}%) - ${speed.toFixed(1)} items/s - ETA: ${etaText}`
+      `${this.message} ${bar} ${this.current}/${this.total} (${percent}%) - ETA: ${etaText}`
     );
-    
+
     // Show recent items if available
     if (this.lastItems.length > 0) {
       console.log('');
       console.log(`  ${chalk.gray('Recent:')} ${this.lastItems.map(item => chalk.green(item)).join(', ')}`);
-      
+      console.log(`  ${chalk.gray('Speed:')} ${speed.toFixed(1)} packages/sec, ${chalk.gray('Time:')} ${elapsedText}`);
+
       // Move cursor back up
-      process.stdout.write('\x1B[1A');
+      process.stdout.write('\x1B[2A');
     }
   }
 }

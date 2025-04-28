@@ -19,6 +19,11 @@ import { pluginManager, PluginHook } from './plugin.js';
 import { verifyPackageIntegrity } from './utils/integrity.js';
 import chalk from 'chalk';
 import { installPackages, PackageInstallOptions, downloadPackage } from './package-installer.js';
+import { workspaceManager, WorkspacePackage } from './workspace.js';
+import { InstallOptions as TypedInstallOptions, PackageDependency as TypedPackageDependency } from './types.js';
+import { NetworkStatus, networkManager } from './utils/network.js';
+import { fallbackManager, FallbackResult } from './utils/fallback.js';
+import { CloudCacheConfig } from './cloud/cloud-cache.js';
 // Import version from package.json
 const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const version = packageJson.version;
@@ -35,14 +40,35 @@ export enum PackageManager {
 /**
  * Installation options
  */
-export interface InstallOptions {
+export interface InstallOptions extends TypedInstallOptions {
   offline: boolean;
   useCache: boolean;
   concurrency: number;
   packageManager: PackageManager;
   includeDevDependencies: boolean;
   skipPostinstall: boolean;
-  registry?: string; // Add registry option
+  registry?: string;
+  workspace?: {
+    enabled: boolean;
+    hoistDependencies: boolean;
+    parallelInstall: boolean;
+    maxConcurrency: number;
+    filter?: string[];
+  };
+  network?: {
+    /** Whether to check network availability */
+    checkAvailability: boolean;
+    /** Timeout for network checks in milliseconds */
+    timeout: number;
+    /** Number of retries for network operations */
+    retries: number;
+    /** Whether to allow fallbacks in partial offline scenarios */
+    allowFallbacks: boolean;
+    /** Whether to warn about outdated dependencies in offline mode */
+    warnOutdated: boolean;
+  };
+  /** Cloud cache configuration */
+  cloud?: CloudCacheConfig;
 }
 
 /**
@@ -54,19 +80,30 @@ const defaultOptions: InstallOptions = {
   concurrency: Math.max(1, os.cpus().length - 1),
   packageManager: PackageManager.NPM,
   includeDevDependencies: true,
-  skipPostinstall: false
+  skipPostinstall: false,
+  workspace: {
+    enabled: false,
+    hoistDependencies: true,
+    parallelInstall: true,
+    maxConcurrency: 4
+  },
+  network: {
+    checkAvailability: true,
+    timeout: 5000,
+    retries: 2,
+    allowFallbacks: true,
+    warnOutdated: true
+  }
 };
 
 /**
  * Package dependency information
  */
-interface PackageDependency {
-  name: string;
-  version: string;
-  path: string;
+interface PackageDependency extends TypedPackageDependency {
   dependencies: Record<string, string>;
   devDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+  isWorkspace?: boolean;
 }
 
 /**
@@ -88,7 +125,12 @@ export class Installer {
    * Initialize the installer
    */
   async init(): Promise<void> {
-    await cache.init();
+    // Initialize cache with cloud configuration if provided
+    if (this.options.cloud) {
+await cache.init();
+    } else {
+      await cache.init();
+    }
 
     // Create worker pool for parallel installation
     if (this.options.concurrency > 1) {
@@ -97,6 +139,12 @@ export class Installer {
           // This function will run in parallel
           const nodeModulesPath = path.join(pkg.path, 'node_modules', pkg.name);
 
+          // Skip workspace packages when installing in workspace mode
+          if (pkg.isWorkspace) {
+            logger.debug(`Skipping workspace package: ${pkg.name}`);
+            return true;
+          }
+
           // Check if package is in cache
           if (await cache.hasPackage(pkg.name, pkg.version)) {
             await cache.restorePackage(pkg.name, pkg.version, nodeModulesPath);
@@ -104,7 +152,7 @@ export class Installer {
           }
 
           // Direct download from npm registry (much faster than using npm install)
-          const registryUrl = 'https://registry.npmjs.org';
+          const registryUrl = this.options.registry || 'https://registry.npmjs.org';
           const packageUrl = `${registryUrl}/${encodeURIComponent(pkg.name)}/-/${pkg.name}-${pkg.version}.tgz`;
 
           try {
@@ -339,6 +387,19 @@ export class Installer {
 
       console.log(chalk.gray(`→ Using package manager: ${this.options.packageManager}`));
 
+      // Check for workspaces
+      let hasWorkspaces = false;
+      if (this.options.workspace?.enabled) {
+        console.log(chalk.gray(`→ Checking for workspaces...`));
+        hasWorkspaces = await workspaceManager.init(projectDir);
+
+        if (hasWorkspaces) {
+          console.log(chalk.cyan(`✓ Found ${chalk.bold(workspaceManager.getPackages().length.toString())} workspace packages`));
+        } else {
+          console.log(chalk.gray(`→ No workspaces found, continuing with regular installation`));
+        }
+      }
+
       // Parse package.json
       const parseTimer = createTimer();
       console.log(chalk.gray(`→ Parsing package.json...`));
@@ -362,9 +423,24 @@ export class Installer {
         }
       }
 
-      // Log dependency count
-      const depCount = Object.keys(dependencies).length;
-      console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`));
+      // If we have workspaces and hoisting is enabled, merge dependencies
+      if (hasWorkspaces && this.options.workspace?.hoistDependencies) {
+        console.log(chalk.gray(`→ Hoisting workspace dependencies...`));
+        const workspaceDeps = workspaceManager.getAllDependencies(this.options.includeDevDependencies);
+
+        // Merge with root dependencies, preferring workspace versions
+        for (const [name, version] of Object.entries(workspaceDeps)) {
+          dependencies[name] = version;
+        }
+
+        // Log updated dependency count
+        const depCount = Object.keys(dependencies).length;
+        console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install (including workspace dependencies)`));
+      } else {
+        // Log dependency count
+        const depCount = Object.keys(dependencies).length;
+        console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`));
+      }
 
       // Create plugin context
       const nodeModulesPath = path.join(projectDir, 'node_modules');
@@ -372,7 +448,8 @@ export class Installer {
         projectDir,
         dependencies,
         nodeModulesPath,
-        packageManager: this.options.packageManager
+        packageManager: this.options.packageManager,
+        workspaces: hasWorkspaces ? workspaceManager.getPackages() : []
       };
 
       // Run pre-install hooks
@@ -402,6 +479,7 @@ export class Installer {
           console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
 
           // Compare with estimated npm install time
+          const depCount = Object.keys(dependencies).length;
           const estimatedNpmTime = depCount * 0.5; // rough estimate: 0.5s per dependency
           const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
           if (speedup > 1) {
@@ -445,7 +523,8 @@ export class Installer {
             console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
 
             // Compare with estimated npm install time
-            const estimatedNpmTime = depCount * 0.5; // rough estimate: 0.5s per dependency
+            const depCount2 = Object.keys(dependencies).length;
+            const estimatedNpmTime = depCount2 * 0.5; // rough estimate: 0.5s per dependency
             const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
             if (speedup > 1) {
               console.log(chalk.cyan(`⚡ ${speedup.toFixed(1)}x faster than npm install`));
@@ -461,10 +540,98 @@ export class Installer {
         }
       }
 
-      // If offline mode is enabled and we don't have a cache hit, fail
-      if (this.options.offline) {
-        console.log(chalk.red(`✗ Offline mode is enabled but dependencies are not in cache`));
-        return false;
+      // Check network availability if needed
+      let networkStatus = NetworkStatus.ONLINE;
+
+      if (this.options.network?.checkAvailability) {
+        console.log(chalk.gray(`→ Checking network availability...`));
+
+        try {
+          const networkCheck = await networkManager.checkNetwork({
+            registry: this.options.registry,
+            timeout: this.options.network.timeout,
+            retries: this.options.network.retries
+          });
+
+          networkStatus = networkCheck.status;
+
+          if (networkStatus === NetworkStatus.OFFLINE) {
+            console.log(chalk.yellow(`⚠ Network is offline`));
+          } else if (networkStatus === NetworkStatus.PARTIAL) {
+            console.log(chalk.yellow(`⚠ Network is partially available (${networkCheck.registryAvailable ? 'registry available' : 'registry unavailable'})`));
+          }
+        } catch (error) {
+          logger.debug(`Network check failed: ${error}`);
+          networkStatus = NetworkStatus.UNKNOWN;
+          console.log(chalk.yellow(`⚠ Network status check failed, assuming offline`));
+        }
+      }
+
+      // If offline mode is enabled or network is unavailable
+      if (this.options.offline || networkStatus === NetworkStatus.OFFLINE) {
+        // Try to find fallbacks for all dependencies
+        if (this.options.network?.allowFallbacks) {
+          console.log(chalk.cyan(`→ Searching for fallbacks in offline mode...`));
+
+          const fallbacks = await fallbackManager.findFallbacks(dependencies, {
+            allowVersionFallback: true,
+            useCache: this.options.useCache,
+            useSnapshot: true,
+            useLocal: true,
+            projectDir,
+            checkNetwork: false // Already checked
+          });
+
+          // Count fallbacks
+          const totalDeps = Object.keys(dependencies).length;
+          const foundExact = Object.values(fallbacks).filter(f => f.found && f.exactVersion).length;
+          const foundFallback = Object.values(fallbacks).filter(f => f.found && !f.exactVersion).length;
+          const missing = totalDeps - foundExact - foundFallback;
+
+          if (missing === 0) {
+            console.log(chalk.green(`✓ Found fallbacks for all ${totalDeps} dependencies (${foundExact} exact, ${foundFallback} compatible versions)`));
+
+            // Install from fallbacks
+            const fallbackTimer = createTimer();
+            console.log(chalk.cyan(`→ Installing from fallbacks...`));
+
+            const fallbackSuccess = await this.installFromFallbacks(projectDir, fallbacks);
+
+            if (fallbackSuccess) {
+              logger.success(`Installed from fallbacks in ${fallbackTimer.getElapsedFormatted()}`);
+
+              // Warn about non-exact versions if needed
+              if (foundFallback > 0 && this.options.network?.warnOutdated) {
+                console.log(chalk.yellow(`⚠ ${foundFallback} dependencies were installed with compatible versions rather than exact versions`));
+                console.log(chalk.yellow(`⚠ Run 'flash-install sync' when online to update to exact versions`));
+              }
+
+              return true;
+            } else {
+              console.log(chalk.red(`✗ Failed to install from fallbacks`));
+            }
+          } else {
+            console.log(chalk.red(`✗ Missing fallbacks for ${missing} dependencies in offline mode`));
+
+            // List missing dependencies
+            const missingDeps = Object.entries(dependencies)
+              .filter(([name]) => !fallbacks[name] || !fallbacks[name].found)
+              .map(([name, version]) => `${name}@${version}`)
+              .join(', ');
+
+            console.log(chalk.red(`Missing: ${missingDeps}`));
+            return false;
+          }
+        } else {
+          console.log(chalk.red(`✗ Offline mode is enabled but dependencies are not in cache`));
+          return false;
+        }
+      }
+
+      // If network is partially available, warn but continue
+      if (networkStatus === NetworkStatus.PARTIAL) {
+        console.log(chalk.yellow(`⚠ Network is partially available, installation may fail for some packages`));
+        console.log(chalk.yellow(`⚠ Use --offline flag to force offline mode with fallbacks`));
       }
 
       // Install dependencies using package manager
@@ -504,6 +671,21 @@ export class Installer {
       }
 
       logger.success(`Dependencies installed in ${installTimer.getElapsedFormatted()}`);
+
+      // Install workspace packages if needed
+      if (hasWorkspaces) {
+        console.log(chalk.cyan(`→ Installing workspace packages...`));
+        const workspaceTimer = createTimer();
+
+        const workspaceSuccess = await this.installWorkspaces(projectDir);
+
+        if (!workspaceSuccess) {
+          console.log(chalk.red(`✗ Workspace installation failed`));
+          return false;
+        }
+
+        logger.success(`Workspace packages installed in ${workspaceTimer.getElapsedFormatted()}`);
+      }
 
       // Run postinstall scripts if needed
       if (!this.options.skipPostinstall && pkg.scripts && pkg.scripts.postinstall) {
@@ -709,14 +891,34 @@ export class Installer {
     await fsUtils.ensureDir(nodeModulesPath);
 
     // Prepare tasks for worker pool
-    const tasks: PackageDependency[] = Object.entries(dependencies).map(
-      ([name, version]) => ({
+    const tasks: PackageDependency[] = Object.entries(dependencies)
+      .filter(([name, version]) => {
+        // Skip workspace packages (they'll be handled separately)
+        if (name.startsWith('packages/') || name.includes('/node_modules/')) {
+          logger.info(`Skipping workspace package: ${name}`);
+          return false;
+        }
+
+        // Skip packages with 'undefined' in name or version
+        if (name.includes('undefined') || version === 'undefined' || version === undefined) {
+          logger.warn(`Skipping invalid package: ${name}@${version}`);
+          return false;
+        }
+
+        // Skip invalid package names or versions
+        if (name.includes('/')) {
+          logger.info(`Skipping package with path: ${name}`);
+          return false;
+        }
+
+        return true;
+      })
+      .map(([name, version]) => ({
         name,
         version,
         path: projectDir,
         dependencies: {}
-      })
-    );
+      }));
 
     // Execute tasks in parallel with progress tracking
     const totalPackages = tasks.length;
@@ -798,6 +1000,395 @@ export class Installer {
       return true;
     } else {
       console.log(chalk.yellow(`⚠ ${failed} of ${totalPackages} packages failed to install`));
+      return false;
+    }
+  }
+
+  /**
+   * Install workspace packages
+   * @param projectDir The project directory
+   * @returns True if successful
+   */
+  private async installWorkspaces(projectDir: string): Promise<boolean> {
+    // Get workspace packages
+    const workspacePackages = workspaceManager.getPackages();
+
+    if (workspacePackages.length === 0) {
+      logger.debug('No workspace packages found');
+      return true;
+    }
+
+    console.log(chalk.cyan(`\n→ Installing workspace packages...`));
+
+    // Filter out any invalid workspace packages
+    const validWorkspacePackages = workspacePackages.filter(pkg => {
+      if (!pkg || !pkg.name || pkg.name === 'undefined') {
+        logger.warn(`Skipping invalid workspace package: ${pkg?.name || 'unknown'}`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validWorkspacePackages.length === 0) {
+      logger.warn('No valid workspace packages found');
+      return true;
+    }
+
+    // Get installation order
+    const installOrder = workspaceManager.getInstallationOrder();
+    console.log(chalk.gray(`→ Determined installation order for ${installOrder.length} packages`));
+
+    // Create progress bar
+    const progress = new ReliableProgress('Installing workspace packages');
+    progress.start();
+
+    // Install each workspace package
+    let installed = 0;
+
+    // Check if we should install in parallel
+    if (this.options.workspace?.parallelInstall) {
+      // Parallel installation
+      const maxConcurrency = this.options.workspace?.maxConcurrency || 4;
+      console.log(chalk.gray(`→ Using parallel installation with ${maxConcurrency} workers`));
+
+      // Create batches based on dependencies
+      const batches: string[][] = [];
+      const processed = new Set<string>();
+
+      // Create batches based on dependency graph
+      while (processed.size < installOrder.length) {
+        const batch: string[] = [];
+
+        for (const pkgName of installOrder) {
+          if (processed.has(pkgName)) continue;
+
+          // Get package dependencies
+          const pkg = workspaceManager.getPackage(pkgName);
+          if (!pkg) continue;
+
+          // Check if all workspace dependencies are processed
+          const deps = Object.keys(pkg.dependencies)
+            .filter(dep => workspaceManager.getPackage(dep) !== undefined);
+
+          const allDepsProcessed = deps.every(dep => processed.has(dep));
+
+          if (allDepsProcessed) {
+            batch.push(pkgName);
+          }
+        }
+
+        if (batch.length === 0) {
+          // This should not happen if the dependency graph is valid
+          logger.warn('Could not determine next batch of packages to install');
+          break;
+        }
+
+        batches.push(batch);
+        batch.forEach(pkg => processed.add(pkg));
+      }
+
+      // Install batches in order
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(chalk.gray(`→ Installing batch ${i + 1}/${batches.length} (${batch.length} packages)`));
+
+        // Install packages in this batch in parallel
+        await Promise.all(batch.map(async (pkgName) => {
+          const pkg = workspaceManager.getPackage(pkgName);
+          if (!pkg) return;
+
+          // Install package
+          const success = await this.installWorkspacePackage(pkg, projectDir);
+
+          if (success) {
+            installed++;
+            progress.updateStatus(`Installing workspace packages (${installed}/${installOrder.length})`);
+          } else {
+            logger.error(`Failed to install workspace package: ${pkgName}`);
+          }
+        }));
+      }
+    } else {
+      // Sequential installation
+      console.log(chalk.gray(`→ Using sequential installation`));
+
+      for (const pkgName of installOrder) {
+        const pkg = workspaceManager.getPackage(pkgName);
+        if (!pkg) continue;
+
+        progress.updateStatus(`Installing ${pkg.name}`);
+
+        // Install package
+        const success = await this.installWorkspacePackage(pkg, projectDir);
+
+        if (success) {
+          installed++;
+          progress.updateStatus(`Installing workspace packages (${installed}/${installOrder.length})`);
+        } else {
+          progress.stop();
+          logger.error(`Failed to install workspace package: ${pkgName}`);
+          return false;
+        }
+      }
+    }
+
+    progress.stop();
+    console.log(chalk.green(`✓ Installed ${installed} workspace packages`));
+
+    return installed === installOrder.length;
+  }
+
+  /**
+   * Install dependencies from fallbacks
+   * @param projectDir Project directory
+   * @param fallbacks Fallback results
+   * @returns True if successful
+   */
+  private async installFromFallbacks(
+    projectDir: string,
+    fallbacks: Record<string, FallbackResult>
+  ): Promise<boolean> {
+    try {
+      // Create node_modules directory
+      const nodeModulesPath = path.join(projectDir, 'node_modules');
+      await fsUtils.ensureDir(nodeModulesPath);
+
+      // Create progress indicator
+      const progress = new ReliableProgress('Installing from fallbacks');
+      progress.start();
+
+      // Count total packages
+      const totalPackages = Object.keys(fallbacks).length;
+      let installedCount = 0;
+
+      // Process each fallback
+      for (const [name, fallback] of Object.entries(fallbacks)) {
+        // Skip packages without fallbacks
+        if (!fallback.found || !fallback.path) {
+          continue;
+        }
+
+        progress.updateStatus(`Installing ${name}@${fallback.version} (${installedCount + 1}/${totalPackages})`);
+
+        // Install from different sources
+        if (fallback.source === 'cache') {
+          // Install from cache
+          const success = await cache.restorePackage(
+            name,
+            fallback.version,
+            path.join(nodeModulesPath, name)
+          );
+
+          if (!success) {
+            logger.error(`Failed to restore ${name}@${fallback.version} from cache`);
+            continue;
+          }
+        } else if (fallback.source === 'snapshot') {
+          // Install from snapshot
+          // This is a bit tricky since we need to extract just one package from the snapshot
+          // For now, we'll restore the entire snapshot to a temporary directory and copy the package
+
+          const tempDir = path.join(os.tmpdir(), `flash-install-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+          await fsUtils.ensureDir(tempDir);
+
+          try {
+            // Restore snapshot to temp directory
+            await snapshot.restore(tempDir, fallback.path);
+
+            // Copy package from temp directory
+            const packagePath = path.join(tempDir, 'node_modules', name);
+            const destPath = path.join(nodeModulesPath, name);
+
+            if (await fsUtils.directoryExists(packagePath)) {
+              await fsUtils.copy(packagePath, destPath);
+            } else {
+              logger.error(`Package ${name} not found in snapshot`);
+              continue;
+            }
+          } finally {
+            // Clean up temp directory
+            await fsUtils.remove(tempDir);
+          }
+        } else if (fallback.source === 'local') {
+          // Install from local node_modules
+          const sourcePath = fallback.path;
+          const destPath = path.join(nodeModulesPath, name);
+
+          await fsUtils.copy(sourcePath, destPath);
+        }
+
+        installedCount++;
+      }
+
+      progress.stop();
+
+      // Return true if all packages were installed
+      return installedCount === Object.values(fallbacks).filter(f => f.found).length;
+    } catch (error) {
+      logger.error(`Failed to install from fallbacks: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Install a single workspace package
+   * @param pkg Workspace package
+   * @param rootDir Root directory
+   * @returns True if successful
+   */
+  private async installWorkspacePackage(pkg: WorkspacePackage, rootDir: string): Promise<boolean> {
+    try {
+      // Create node_modules directory
+      const nodeModulesPath = path.join(pkg.directory, 'node_modules');
+      await fsUtils.ensureDir(nodeModulesPath);
+
+      // Create symlinks for workspace dependencies
+      for (const [depName, depVersion] of Object.entries(pkg.dependencies)) {
+        const depPkg = workspaceManager.getPackage(depName);
+
+        if (depPkg) {
+          // Create symlink to workspace package
+          const targetPath = path.join(nodeModulesPath, depName);
+          const sourcePath = depPkg.directory;
+
+          // Ensure parent directory exists
+          await fsUtils.ensureDir(path.dirname(targetPath));
+
+          // Create symlink
+          try {
+            // Remove existing directory or symlink
+            if (await fsUtils.exists(targetPath)) {
+              await fsUtils.remove(targetPath);
+            }
+
+            // Create symlink
+            await fs.symlink(sourcePath, targetPath, 'junction');
+          } catch (error) {
+            logger.debug(`Failed to create symlink from ${sourcePath} to ${targetPath}: ${error}`);
+          }
+        }
+      }
+
+      // Install non-workspace dependencies
+      const dependencies: Record<string, string> = {};
+
+      // Add regular dependencies
+      for (const [name, version] of Object.entries(pkg.dependencies)) {
+        // Skip workspace packages
+        if (workspaceManager.getPackage(name)) {
+          continue;
+        }
+
+        dependencies[name] = version;
+      }
+
+      // Add dev dependencies if needed
+      if (this.options.includeDevDependencies) {
+        for (const [name, version] of Object.entries(pkg.devDependencies || {})) {
+          // Skip workspace packages
+          if (workspaceManager.getPackage(name)) {
+            continue;
+          }
+
+          dependencies[name] = version;
+        }
+      }
+
+      // If hoisting is enabled, skip installing dependencies that are already in the root
+      if (this.options.workspace?.hoistDependencies) {
+        const rootNodeModulesPath = path.join(rootDir, 'node_modules');
+
+        for (const name of Object.keys(dependencies)) {
+          const depPath = path.join(rootNodeModulesPath, name);
+
+          if (await fsUtils.directoryExists(depPath)) {
+            // Create symlink to hoisted dependency
+            const targetPath = path.join(nodeModulesPath, name);
+
+            // Ensure parent directory exists
+            await fsUtils.ensureDir(path.dirname(targetPath));
+
+            // Create symlink
+            try {
+              // Remove existing directory or symlink
+              if (await fsUtils.exists(targetPath)) {
+                await fsUtils.remove(targetPath);
+              }
+
+              // Create symlink
+              await fs.symlink(depPath, targetPath, 'junction');
+
+              // Remove from dependencies to install
+              delete dependencies[name];
+            } catch (error) {
+              logger.debug(`Failed to create symlink from ${depPath} to ${targetPath}: ${error}`);
+            }
+          }
+        }
+      }
+
+      // If there are no dependencies left to install, we're done
+      if (Object.keys(dependencies).length === 0) {
+        return true;
+      }
+
+      // Install remaining dependencies
+      if (Object.keys(dependencies).length > 0) {
+        logger.info(`Installing ${Object.keys(dependencies).length} dependencies for ${pkg.name}...`);
+
+        // Filter out any invalid dependencies (like undefined versions)
+        const validDependencies = Object.entries(dependencies)
+          .filter(([name, version]) => {
+            if (version === undefined || version === 'undefined') {
+              logger.warn(`Skipping invalid dependency ${name}@${version} in ${pkg.name}`);
+              return false;
+            }
+            return true;
+          });
+
+        if (validDependencies.length === 0) {
+          logger.info(`No valid dependencies to install for ${pkg.name}`);
+          return true;
+        }
+
+        const depArray = validDependencies.map(([name, version]) => `${name}@${version}`);
+
+        // Use npm directly for more reliable installation
+        try {
+          const cmd = {
+            [PackageManager.NPM]: 'npm',
+            [PackageManager.YARN]: 'yarn',
+            [PackageManager.PNPM]: 'pnpm'
+          }[this.options.packageManager];
+
+          const args = [
+            'install',
+            ...depArray,
+            '--no-save'
+          ];
+
+          if (this.options.registry) {
+            args.push('--registry', this.options.registry);
+          }
+
+          logger.debug(`Running: ${cmd} ${args.join(' ')} in ${pkg.directory}`);
+
+          execSync(`${cmd} ${args.join(' ')}`, {
+            cwd: pkg.directory,
+            stdio: 'ignore'
+          });
+
+          return true;
+        } catch (error) {
+          logger.error(`Failed to install dependencies for ${pkg.name}: ${error}`);
+          return false;
+        }
+      } else {
+        logger.info(`No dependencies to install for ${pkg.name}`);
+        return true;
+      }
+    } catch (error) {
+      logger.error(`Failed to install workspace package ${pkg.name}: ${error}`);
       return false;
     }
   }

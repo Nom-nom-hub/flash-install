@@ -19,11 +19,14 @@ A fast, drop-in replacement for `npm install`, focused on drastically speeding u
 - **Parallel Operations**: Installs packages in parallel using Node.js worker threads
 - **Snapshot Support**: Creates and restores `.flashpack` archives for instant dependency restoration
 - **Package Manager Compatibility**: Works with npm, yarn, and pnpm projects
-- **Offline Mode**: Install dependencies without internet connection using cache or snapshots
+- **Monorepo Support**: Enhanced workspace detection, parallel installation across workspaces, and intelligent dependency hoisting
+- **Enhanced Offline Mode**: Install dependencies without internet connection with intelligent network detection and fallback strategies
 - **Checksum Validation**: Verifies package integrity against npm registry checksums
 - **Snapshot Fingerprinting**: Auto-invalidates snapshots when lockfiles change
 - **Sync Command**: Efficiently updates dependencies without full reinstallation
 - **Plugin System**: Extensible architecture with lifecycle hooks
+- **Cloud Cache Integration**: Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities
+- **Dependency Analysis**: Visualization of dependency graphs, detection of duplicates, and size analysis
 
 ## Installation
 
@@ -154,6 +157,78 @@ Optimize cache storage:
 flash-install cache --optimize
 ```
 
+### Cloud Cache
+
+Synchronize your cache with cloud storage:
+
+```bash
+# Sync with default settings (both upload and download)
+flash-install cloud-sync --cloud-bucket=your-bucket-name
+
+# Upload only
+flash-install cloud-sync --direction=upload --cloud-bucket=your-bucket-name
+
+# Download only
+flash-install cloud-sync --direction=download --cloud-bucket=your-bucket-name
+
+# Force synchronization even if files exist
+flash-install cloud-sync --force --cloud-bucket=your-bucket-name
+
+# Use a specific cloud provider
+flash-install cloud-sync --cloud-provider=azure --cloud-bucket=your-container-name
+
+# Team sharing with access controls
+flash-install cloud-sync --team-id=your-team --team-token=your-token --team-access-level=write
+```
+
+See the [cloud cache documentation](docs/cloud-cache.md) for more details.
+
+### Dependency Analysis
+
+Flash Install provides tools for analyzing and visualizing dependencies:
+
+```bash
+# Analyze dependencies and show statistics
+flash-install analyze
+
+# Visualize dependency tree
+flash-install deps
+
+# Generate a DOT graph for Graphviz
+flash-install deps --format dot --output deps.dot
+
+# Generate a Markdown report
+flash-install deps --format markdown --output deps.md
+```
+
+See the [dependency analysis documentation](docs/docs/dependency-analysis.md) for more details.
+
+### Network Status
+
+Check network availability and registry status:
+
+```bash
+# Check network status
+flash-install network
+```
+
+### Monorepo Support
+
+Flash Install provides robust support for monorepos and workspaces:
+
+```bash
+# Install dependencies with workspace support
+flash-install -w
+
+# List all workspace packages
+flash-install workspaces
+
+# Install with custom workspace options
+flash-install -w --no-hoist --workspace-concurrency 8
+```
+
+See the [monorepo documentation](docs/docs/monorepo.md) for more details.
+
 ### Plugin Management
 
 List installed plugins:
@@ -187,6 +262,48 @@ flash-install plugin remove <plugin-name>
 - `-v, --verbose`: Enable verbose logging
 - `-q, --quiet`: Suppress all output except errors
 
+### Workspace Options
+
+- `-w, --workspace`: Enable workspace support
+- `--no-hoist`: Disable dependency hoisting in workspaces
+- `--no-parallel-workspaces`: Disable parallel installation of workspace packages
+- `--workspace-concurrency <number>`: Number of concurrent workspace installations
+- `--workspace-filter <packages...>`: Filter specific workspace packages
+
+### Performance Options
+
+- `--cache-compression`: Enable cache compression (default: true)
+- `--no-cache-compression`: Disable cache compression
+- `--cache-compression-level <number>`: Set compression level (1-9)
+- `--cache-compression-format <format>`: Set compression format (gzip, brotli)
+- `--cache-integrity-check`: Enable integrity checking (default: true)
+- `--no-cache-integrity-check`: Disable integrity checking
+- `--memory-limit <percentage>`: Set memory usage limit (default: 80%)
+- `--no-streaming`: Disable streaming operations
+
+### Network Options
+
+- `--no-network-check`: Disable network availability check
+- `--network-timeout <ms>`: Network check timeout in milliseconds (default: 5000)
+- `--network-retries <number>`: Number of retries for network operations (default: 2)
+- `--no-fallbacks`: Disable fallbacks in offline mode
+- `--no-outdated-warnings`: Disable warnings about outdated dependencies in offline mode
+
+### Cloud Cache Options
+
+- `--cloud-cache`: Enable cloud cache integration
+- `--cloud-provider <provider>`: Cloud provider type (s3, azure, gcp)
+- `--cloud-region <region>`: Cloud provider region
+- `--cloud-endpoint <url>`: Cloud provider endpoint URL
+- `--cloud-bucket <name>`: Cloud provider bucket name
+- `--cloud-prefix <prefix>`: Cloud provider prefix
+- `--cloud-sync <policy>`: Cloud sync policy (always-upload, always-download, upload-if-missing, download-if-missing, newest)
+- `--team-id <id>`: Team ID for shared caching
+- `--team-token <token>`: Team access token
+- `--team-access-level <level>`: Team access level (read, write, admin)
+- `--team-restrict`: Restrict access to team members only
+- `--invalidate-on-lockfile-change`: Invalidate cache when lockfile changes
+
 ### Snapshot Options
 
 - `-f, --format <format>`: Snapshot format (zip, tar, tar.gz)
@@ -214,6 +331,18 @@ flash-install plugin remove <plugin-name>
 - `--verify`: Verify cache integrity
 - `--optimize`: Optimize cache storage
 
+### Analysis Options
+
+- `--no-dev`: Exclude dev dependencies
+- `--direct-only`: Show only direct dependencies
+- `--max-depth <depth>`: Maximum depth to analyze
+- `--no-duplicates`: Hide duplicate dependencies
+- `--no-sizes`: Hide dependency sizes
+- `--format <format>`: Output format (tree, dot, markdown)
+- `--output <file>`: Output file path
+- `--no-versions`: Hide dependency versions
+- `--no-colors`: Disable colors in output
+
 ### Plugin Options
 
 - `add <path>`: Add a plugin from a path
@@ -223,13 +352,17 @@ flash-install plugin remove <plugin-name>
 ## How It Works
 
 1. **Dependency Resolution**: Parses lockfiles to determine exact dependencies
-2. **Cache Check**: Checks if dependencies are in the global cache
-3. **Snapshot Check**: Checks if a valid `.flashpack` snapshot exists
-4. **Installation**: If no cache or snapshot is available, installs dependencies using the package manager
-5. **Caching**: Adds newly installed packages to the cache
-6. **Integrity Verification**: Validates package checksums against npm registry
-7. **Snapshotting**: Creates a `.flashpack` snapshot with fingerprinting for future use
-8. **Plugin Execution**: Runs plugins at various lifecycle hooks
+2. **Workspace Detection**: Identifies workspace packages in monorepos (when enabled)
+3. **Cache Check**: Checks if dependencies are in the global cache
+4. **Snapshot Check**: Checks if a valid `.flashpack` snapshot exists
+5. **Memory Optimization**: Configures memory limits and batch sizes based on system capabilities
+6. **Installation**: If no cache or snapshot is available, installs dependencies using the package manager
+7. **Workspace Installation**: Installs workspace packages in dependency order (when enabled)
+8. **Streaming Operations**: Uses streaming for file operations to minimize memory footprint
+9. **Caching**: Adds newly installed packages to the cache with optional compression
+10. **Integrity Verification**: Validates package checksums against npm registry
+11. **Snapshotting**: Creates a `.flashpack` snapshot with fingerprinting for future use
+12. **Plugin Execution**: Runs plugins at various lifecycle hooks
 
 ## Plugin System
 
@@ -267,10 +400,13 @@ Plugins can be used for tasks like:
 
 - **Time Savings**: Dramatically reduces installation time for repeated builds
 - **Bandwidth Savings**: Minimizes network usage by using cached packages
-- **Disk Space Efficiency**: Uses hardlinks to avoid duplicating files
+- **Disk Space Efficiency**: Uses hardlinks and compression to avoid duplicating files
+- **Memory Efficiency**: Optimized for low memory usage even with large dependency trees
 - **CI/CD Optimization**: Perfect for continuous integration environments
 - **Developer Experience**: Instant dependency restoration when switching branches
+- **Monorepo Efficiency**: Optimized workspace handling with dependency hoisting
 - **Offline Development**: Work without internet connection using cache or snapshots
+- **Streaming Operations**: Uses streaming for file operations to minimize memory footprint
 
 ## Contributing
 
@@ -283,6 +419,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request at https://github.com/Nom-nom-hub/flash-install/pulls
 
 
+
+## Documentation
+
+For more detailed documentation, see the [docs](docs) directory.
+
+### Core Features
+
+- [Performance Optimizations](docs/performance.md) - Learn about the performance optimizations in flash-install
+- [Monorepo Support](docs/monorepo.md) - Manage dependencies in monorepos
+- [Offline Mode](docs/offline-mode.md) - Work without an internet connection
+- [Dependency Analysis](docs/dependency-analysis.md) - Analyze and visualize dependencies
+- [Cloud Cache](docs/cloud-cache.md) - Share caches across machines and teams
 
 ## License
 

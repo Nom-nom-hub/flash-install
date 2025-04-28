@@ -1,8 +1,8 @@
 // Test script for installing individual packages
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // Create a temporary test directory
 const testDir = path.join(os.tmpdir(), `flash-install-test-${Date.now()}`);
@@ -57,18 +57,18 @@ const testCases = [
     verify: () => {
       const pkgJson = JSON.parse(fs.readFileSync(path.join(testDir, 'package.json')));
       console.log('Package.json contents:', JSON.stringify(pkgJson, null, 2));
-      
+
       // Check if dependencies exists and if moment exists in dependencies
       const hasDependencies = !!pkgJson.dependencies;
       const hasMoment = hasDependencies && !!pkgJson.dependencies.moment;
       const versionFormat = hasMoment ? pkgJson.dependencies.moment : 'N/A';
       const isExact = hasMoment && !pkgJson.dependencies.moment.startsWith('^');
-      
+
       console.log('Has dependencies:', hasDependencies);
       console.log('Has moment:', hasMoment);
       console.log('Version format:', versionFormat);
       console.log('Is exact version:', isExact);
-      
+
       return hasDependencies && hasMoment && isExact;
     }
   }
@@ -82,12 +82,12 @@ for (const test of testCases) {
   try {
     console.log(`\n🧪 Running test: ${test.name}`);
     console.log(`Command: ${test.command}`);
-    
-    execSync(test.command, { 
-      cwd: testDir, 
-      stdio: 'inherit' 
+
+    execSync(test.command, {
+      cwd: testDir,
+      stdio: 'inherit'
     });
-    
+
     const passed = test.verify();
     if (passed) {
       console.log(`✅ Test passed: ${test.name}`);
