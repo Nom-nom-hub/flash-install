@@ -8,7 +8,8 @@
   "bin": {
     "flash-install": "dist/cli.js",
     "flash": "dist/cli.js",
-    "flash-direct": "dist/cli-direct.js"
+    "flash-direct": "dist/cli-direct.js",
+    "flash-install-direct": "dist/cli-direct.js"
   },
   "scripts": {
     "build": "tsc",

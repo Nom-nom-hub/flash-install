@@ -446,6 +446,74 @@ program
     }
   });
 
+// Clean modules command (only removes node_modules)
+program
+  .command('clean-modules')
+  .description('Remove only node_modules directory (preserves snapshot)')
+  .argument('[dir]', 'Project directory', '.')
+  .action(async (dir) => {
+    // Resolve project directory
+    const projectDir = path.resolve(dir);
+
+    // Check if directory exists
+    if (!await fsUtils.directoryExists(projectDir)) {
+      logger.error(`Directory not found: ${projectDir}`);
+      process.exit(1);
+    }
+
+    // Check if node_modules exists
+    const nodeModulesPath = path.join(projectDir, 'node_modules');
+
+    logger.flash(`Cleaning node_modules in ${chalk.bold(projectDir)}`);
+
+    try {
+      // Remove node_modules
+      if (await fsUtils.directoryExists(nodeModulesPath)) {
+        await fsUtils.remove(nodeModulesPath);
+        logger.success(`Cleaned node_modules in ${chalk.bold(projectDir)} (snapshot preserved)`);
+      } else {
+        logger.info(`No node_modules directory found in ${chalk.bold(projectDir)}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to clean node_modules: ${error}`);
+      process.exit(1);
+    }
+  });
+
+// Clean snapshot command (only removes snapshot)
+program
+  .command('clean-snapshot')
+  .description('Remove only snapshot file (preserves node_modules)')
+  .argument('[dir]', 'Project directory', '.')
+  .action(async (dir) => {
+    // Resolve project directory
+    const projectDir = path.resolve(dir);
+
+    // Check if directory exists
+    if (!await fsUtils.directoryExists(projectDir)) {
+      logger.error(`Directory not found: ${projectDir}`);
+      process.exit(1);
+    }
+
+    // Check if snapshot exists
+    const snapshotPath = path.join(projectDir, '.flashpack');
+
+    logger.flash(`Cleaning snapshot in ${chalk.bold(projectDir)}`);
+
+    try {
+      // Remove snapshot
+      if (await fsUtils.fileExists(snapshotPath)) {
+        await fsUtils.remove(snapshotPath);
+        logger.success(`Cleaned snapshot in ${chalk.bold(projectDir)} (node_modules preserved)`);
+      } else {
+        logger.info(`No snapshot file found in ${chalk.bold(projectDir)}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to clean snapshot: ${error}`);
+      process.exit(1);
+    }
+  });
+
 // Sync command
 program
   .command('sync')

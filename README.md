@@ -155,6 +155,8 @@ Clean the global cache:
 flash-install clean --global
 ```
 
+> **Note:** The `clean-modules` and `clean-snapshot` commands are now available in both the main CLI interface and the direct CLI interface. Previously, they were only available in the direct CLI interface.
+
 ### Sync Dependencies
 
 Efficiently update dependencies without a full reinstall:
@@ -445,6 +447,26 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request at https://github.com/Nom-nom-hub/flash-install/pulls
 
 
+
+## Direct CLI Interface
+
+flash-install provides two CLI interfaces:
+
+1. **Main CLI Interface** (`flash-install`): The primary interface with all core commands and features.
+2. **Direct CLI Interface** (`flash-install-direct`): A simplified interface with direct implementations of commands.
+
+The direct CLI interface can be accessed by running:
+
+```bash
+node dist/cli-direct.js <command>
+```
+
+This interface is useful for:
+- Debugging issues with the main CLI
+- Running commands with minimal overhead
+- Accessing experimental features not yet available in the main CLI
+
+> **Note:** Some commands may behave slightly differently between the two interfaces. The main CLI interface is recommended for most users.
 
 ## Documentation
 

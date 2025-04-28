@@ -24,7 +24,21 @@ Install flash-install globally using npm:
 npm install -g @flash-install/cli
 ```
 
-This will make the `flash-install` and `flash-direct` commands available globally on your system.
+This will make the `flash-install`, `flash-direct`, and `flash-install-direct` commands available globally on your system.
+
+## CLI Interfaces
+
+flash-install provides two CLI interfaces:
+
+1. **Main CLI Interface** (`flash-install`): The primary interface with all core commands and features.
+2. **Direct CLI Interface** (`flash-direct` or `flash-install-direct`): A simplified interface with direct implementations of commands.
+
+The direct CLI interface is useful for:
+- Debugging issues with the main CLI
+- Running commands with minimal overhead
+- Accessing experimental features not yet available in the main CLI
+
+> **Note:** Some commands may behave slightly differently between the two interfaces. The main CLI interface is recommended for most users.
 
 ## Basic Usage
 
@@ -99,6 +113,8 @@ flash-install clean-snapshot
 ```
 
 This is useful when you want to create a fresh snapshot without removing your installed dependencies.
+
+> **Note:** The `clean-modules` and `clean-snapshot` commands are now available in both the main CLI interface and the direct CLI interface.
 
 ## Command Line Options
 
