@@ -16,34 +16,40 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        
+
+    - name: Clean npm cache
+      run: npm cache clean --force
+
     - name: Install dependencies
-      run: npm ci
-      
+      run: npm ci --no-audit --force
+
     - name: Build
       run: npm run build
-      
+
     - name: Test
       run: npm test
-      
+
   lint:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Use Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18.x'
-        
+
+    - name: Clean npm cache
+      run: npm cache clean --force
+
     - name: Install dependencies
-      run: npm ci
-      
+      run: npm ci --no-audit --force
+
     - name: Lint
       run: npm run lint
