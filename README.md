@@ -481,6 +481,20 @@ For more detailed documentation, see the [docs](docs) directory.
 - [Cloud Cache](docs/cloud-cache.md) - Share caches across machines and teams
 - [Enhanced Plugin System](docs/enhanced-plugin-system.md) - Extend flash-install with plugins
 
+## Sponsorship
+
+flash-install is an open-source project that relies on community support. If you find this tool valuable for your work, please consider sponsoring its development.
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/Nom-nom-hub)
+
+Your sponsorship helps us:
+- Maintain and improve flash-install
+- Develop new features
+- Provide better documentation
+- Support the community
+
+See our [SPONSORS.md](SPONSORS.md) file for a list of our generous sponsors.
+
 ## License
 
 MIT
@@ -489,3 +503,4 @@ MIT
 
 - Inspired by the speed of [Bun](https://bun.sh/), the reliability of [Yarn](https://yarnpkg.com/), and the efficiency of [PNPM](https://pnpm.io/)
 - Thanks to all the open-source projects that made this possible
+- Special thanks to all our [sponsors](SPONSORS.md) who make this project sustainable
