@@ -99,12 +99,32 @@ export async function installPackages(
         case PackageManager.PNPM:
           cmd = `pnpm add ${validPackages.join(' ')} ${saveFlag}`;
           break;
+        case PackageManager.BUN:
+          // Bun uses different flags
+          cmd = `bun add ${validPackages.join(' ')} ${saveFlag.replace('--save', '').replace('--save-dev', '--dev').replace('--save-exact', '--exact')}`;
+          break;
         default:
           cmd = `npm install ${validPackages.join(' ')} ${saveFlag}`;
       }
 
+      // Add registry option with the appropriate flag for each package manager
       if (options.registry) {
-        cmd += ` --registry ${options.registry}`;
+        switch (packageManager) {
+          case PackageManager.NPM:
+            cmd += ` --registry=${options.registry}`;
+            break;
+          case PackageManager.YARN:
+            cmd += ` --registry ${options.registry}`;
+            break;
+          case PackageManager.PNPM:
+            cmd += ` --registry=${options.registry}`;
+            break;
+          case PackageManager.BUN:
+            cmd += ` --registry=${options.registry}`;
+            break;
+          default:
+            cmd += ` --registry=${options.registry}`;
+        }
       }
 
       console.log(`Executing: ${cmd}`);

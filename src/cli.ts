@@ -6,19 +6,19 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import { logger, LogLevel } from './utils/logger.js';
-import { installer, PackageManager, InstallOptions, Installer } from './install.js';
+import { execSync } from 'child_process';
+import { logger } from './utils/logger.js';
+import { installer, PackageManager, Installer } from './install.js';
 import { snapshot, SnapshotFormat, Snapshot } from './snapshot.js';
 import { cache } from './cache.js';
 import * as fsUtils from './utils/fs.js';
-import { sync, Sync } from './sync.js';
-import { pluginManager, PluginHook } from './plugin.js';
 import { registerPluginCommands } from './plugin-commands.js';
 import { NetworkStatus, networkManager } from './utils/network.js';
 import { Spinner } from './utils/progress.js';
 import { cloudCache, SyncPolicy, CloudCacheConfig } from './cloud/cloud-cache.js';
 import { CloudProgress } from './utils/cloud-progress.js';
 import { workspaceManager } from './workspace.js';
+import { Sync } from './sync.js';
 import { startTui } from './tui/index.js';
 
 /**
@@ -348,8 +348,9 @@ program
 
     // Parse package.json and lockfile
     try {
-      const pkg = await installer.parsePackageJson(projectDir);
+      // Detect package manager
       const packageManager = installer.detectPackageManager(projectDir);
+      // Parse lockfile
       const dependencies = await installer.parseLockfile(projectDir, packageManager);
 
       // Create snapshot
@@ -548,6 +549,155 @@ program
     // Start the TUI
     startTui(projectDir);
   });
+
+// Package manager command
+program
+  .command('pm')
+  .description('Package manager utilities')
+  .addCommand(
+    new Command('use')
+      .description('Set the package manager for a project')
+      .argument('<manager>', 'Package manager to use (npm, yarn, pnpm, bun)')
+      .argument('[dir]', 'Project directory', '.')
+      .action(async (manager, dir) => {
+        // Resolve project directory
+        const projectDir = path.resolve(dir);
+
+        // Check if directory exists
+        if (!await fsUtils.directoryExists(projectDir)) {
+          logger.error(`Directory not found: ${projectDir}`);
+          process.exit(1);
+        }
+
+        // Check if package.json exists
+        const packageJsonPath = path.join(projectDir, 'package.json');
+        if (!await fsUtils.fileExists(packageJsonPath)) {
+          logger.error(`package.json not found in ${projectDir}`);
+          process.exit(1);
+        }
+
+        // Validate package manager
+        const validManagers = ['npm', 'yarn', 'pnpm', 'bun'];
+        if (!validManagers.includes(manager)) {
+          logger.error(`Invalid package manager: ${manager}`);
+          logger.info(`Valid package managers: ${validManagers.join(', ')}`);
+          process.exit(1);
+        }
+
+        // Check if the package manager is installed
+        try {
+          execSync(`${manager} --version`, { stdio: 'ignore' });
+        } catch (error) {
+          logger.error(`Package manager ${chalk.bold(manager)} is not installed.`);
+          process.exit(1);
+        }
+
+        // Initialize installer
+        const customInstaller = new Installer({
+          packageManager: manager as PackageManager
+        });
+
+        // Get package manager version
+        const packageManagerVersion = customInstaller.getPackageManagerVersion(manager as PackageManager);
+
+        logger.flash(`Setting package manager to ${chalk.bold(manager)}${packageManagerVersion ? ` v${packageManagerVersion}` : ''}`);
+
+        // Create or update .npmrc file for npm
+        if (manager === 'npm') {
+          const npmrcPath = path.join(projectDir, '.npmrc');
+          await fs.writeFile(npmrcPath, 'package-manager=npm\n');
+          logger.success(`Created .npmrc file`);
+        }
+        // Create or update .yarnrc file for yarn
+        else if (manager === 'yarn') {
+          const yarnrcPath = path.join(projectDir, '.yarnrc');
+          await fs.writeFile(yarnrcPath, '# Set by flash-install\n');
+          logger.success(`Created .yarnrc file`);
+        }
+        // Create or update .npmrc file for pnpm
+        else if (manager === 'pnpm') {
+          const npmrcPath = path.join(projectDir, '.npmrc');
+          await fs.writeFile(npmrcPath, 'package-manager=pnpm\n');
+          logger.success(`Created .npmrc file`);
+        }
+        // Create or update .bunfig.toml file for bun
+        else if (manager === 'bun') {
+          const bunfigPath = path.join(projectDir, '.bunfig.toml');
+          await fs.writeFile(bunfigPath, '# Set by flash-install\n');
+          logger.success(`Created .bunfig.toml file`);
+        }
+
+        // Update package.json
+        try {
+          const pkg = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+
+          // Add packageManager field
+          pkg.packageManager = `${manager}@${packageManagerVersion || '*'}`;
+
+          // Write updated package.json
+          await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+
+          logger.success(`Updated package.json with packageManager field`);
+        } catch (error) {
+          logger.error(`Failed to update package.json: ${error}`);
+          process.exit(1);
+        }
+
+        logger.success(`Successfully set package manager to ${chalk.bold(manager)}`);
+      })
+  )
+  .addCommand(
+    new Command('info')
+      .description('Show information about available package managers')
+      .argument('[dir]', 'Project directory', '.')
+      .action(async (dir) => {
+        // Resolve project directory
+        const projectDir = path.resolve(dir);
+
+        // Check if directory exists
+        if (!await fsUtils.directoryExists(projectDir)) {
+          logger.error(`Directory not found: ${projectDir}`);
+          process.exit(1);
+        }
+
+        // Initialize installer
+        const customInstaller = new Installer();
+
+        // Get information about package managers
+        const packageManagers = [
+          PackageManager.NPM,
+          PackageManager.YARN,
+          PackageManager.PNPM,
+          PackageManager.BUN
+        ];
+
+        console.log(chalk.cyan(`
+⚡ flash-install Package Manager Info
+        `));
+
+        console.log(chalk.cyan(`Project directory: ${chalk.bold(projectDir)}`));
+
+        // Detect current package manager
+        const currentPackageManager = customInstaller.detectPackageManager(projectDir);
+        console.log(chalk.cyan(`Current package manager: ${chalk.bold(currentPackageManager)}`));
+
+        console.log('\nAvailable package managers:');
+
+        for (const pm of packageManagers) {
+          const isInstalled = customInstaller.isPackageManagerInstalled(pm);
+          const version = customInstaller.getPackageManagerVersion(pm);
+
+          if (isInstalled) {
+            console.log(`${chalk.green('✓')} ${chalk.bold(pm)}${version ? ` v${version}` : ''}`);
+          } else {
+            console.log(`${chalk.red('✗')} ${chalk.bold(pm)} (not installed)`);
+          }
+        }
+
+        console.log('\nTo change package manager:');
+        console.log(`  ${chalk.cyan('flash-install pm use <manager>')}`);
+      })
+  );
 
 // Sync command
 program

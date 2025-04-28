@@ -13,5 +13,12 @@ module.exports = {
     '^../dist/cloud/s3-provider.js$': '<rootDir>/src/cloud/s3-provider.cjs',
     '^../dist/install.js$': '<rootDir>/src/install.cjs',
     '^../dist/cache.js$': '<rootDir>/src/cache.cjs',
-  }
+    '^../dist/tui/index.js$': '<rootDir>/src/tui/index.cjs',
+  },
+  // Mock modules that cause issues in tests
+  modulePathIgnorePatterns: [
+    '<rootDir>/node_modules/ink',
+    '<rootDir>/node_modules/react',
+    '<rootDir>/node_modules/react-dom'
+  ]
 };

@@ -10,7 +10,8 @@ module.exports = {
   PackageManager: {
     NPM: 'npm',
     YARN: 'yarn',
-    PNPM: 'pnpm'
+    PNPM: 'pnpm',
+    BUN: 'bun'
   },
 
   // Export Installer class

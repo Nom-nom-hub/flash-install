@@ -35,7 +35,8 @@ const version = packageJson.version;
 export enum PackageManager {
   NPM = 'npm',
   YARN = 'yarn',
-  PNPM = 'pnpm'
+  PNPM = 'pnpm',
+  BUN = 'bun'
 }
 
 /**
@@ -182,7 +183,8 @@ await cache.init();
             const cmd = {
               [PackageManager.NPM]: `npm install ${pkg.name}@${pkg.version} --no-save`,
               [PackageManager.YARN]: `yarn add ${pkg.name}@${pkg.version} --no-save`,
-              [PackageManager.PNPM]: `pnpm add ${pkg.name}@${pkg.version} --no-save`
+              [PackageManager.PNPM]: `pnpm add ${pkg.name}@${pkg.version} --no-save`,
+              [PackageManager.BUN]: `bun add ${pkg.name}@${pkg.version} --no-save`
             }[this.options.packageManager];
 
             execSync(cmd, { cwd: pkg.path, stdio: 'ignore' });
@@ -208,12 +210,67 @@ await cache.init();
    * @returns The detected package manager
    */
   detectPackageManager(projectDir: string): PackageManager {
-    if (fs.existsSync(path.join(projectDir, 'yarn.lock'))) {
+    // Check for Bun lockfile (bun.lockb)
+    if (fs.existsSync(path.join(projectDir, 'bun.lockb'))) {
+      return PackageManager.BUN;
+    }
+    // Check for Yarn lockfile
+    else if (fs.existsSync(path.join(projectDir, 'yarn.lock'))) {
       return PackageManager.YARN;
-    } else if (fs.existsSync(path.join(projectDir, 'pnpm-lock.yaml'))) {
+    }
+    // Check for PNPM lockfile
+    else if (fs.existsSync(path.join(projectDir, 'pnpm-lock.yaml'))) {
       return PackageManager.PNPM;
-    } else {
+    }
+    // Check for NPM lockfile
+    else if (fs.existsSync(path.join(projectDir, 'package-lock.json'))) {
       return PackageManager.NPM;
+    }
+    // Default to NPM if no lockfile is found
+    else {
+      return PackageManager.NPM;
+    }
+  }
+
+  /**
+   * Check if a package manager is installed
+   * @param packageManager The package manager to check
+   * @returns True if the package manager is installed
+   */
+  isPackageManagerInstalled(packageManager: PackageManager): boolean {
+    try {
+      const cmd = {
+        [PackageManager.NPM]: 'npm --version',
+        [PackageManager.YARN]: 'yarn --version',
+        [PackageManager.PNPM]: 'pnpm --version',
+        [PackageManager.BUN]: 'bun --version'
+      }[packageManager];
+
+      execSync(cmd, { stdio: 'ignore' });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get the version of a package manager
+   * @param packageManager The package manager
+   * @returns The version string or null if not installed
+   */
+  getPackageManagerVersion(packageManager: PackageManager): string | null {
+    try {
+      const cmd = {
+        [PackageManager.NPM]: 'npm --version',
+        [PackageManager.YARN]: 'yarn --version',
+        [PackageManager.PNPM]: 'pnpm --version',
+        [PackageManager.BUN]: 'bun --version'
+      }[packageManager];
+
+      const output = execSync(cmd, { encoding: 'utf8' }).trim();
+      return output;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -359,8 +416,69 @@ await cache.init();
         return this.parseYarnLockfile(projectDir);
       case PackageManager.PNPM:
         return this.parsePnpmLockfile(projectDir);
+      case PackageManager.BUN:
+        return this.parseBunLockfile(projectDir);
       default:
         throw new Error(`Unsupported package manager: ${packageManager}`);
+    }
+  }
+
+  /**
+   * Parse Bun lockfile (bun.lockb)
+   * @param projectDir The project directory
+   * @returns The parsed dependencies
+   */
+  async parseBunLockfile(projectDir: string): Promise<Record<string, string>> {
+    try {
+      logger.debug('Parsing Bun lockfile...');
+
+      // Since bun.lockb is a binary file, we'll extract dependencies from package.json
+      // and then use the 'bun pm ls' command to get the resolved versions
+
+      // First, parse package.json to get the dependencies
+      const pkg = await this.parsePackageJson(projectDir);
+      const dependencies: Record<string, string> = { ...pkg.dependencies };
+
+      // Include dev dependencies if needed
+      if (this.options.includeDevDependencies && pkg.devDependencies) {
+        Object.assign(dependencies, pkg.devDependencies);
+      }
+
+      // Try to get the resolved versions using 'bun pm ls --json'
+      try {
+        const bunLsOutput = execSync('bun pm ls --json', {
+          cwd: projectDir,
+          stdio: ['ignore', 'pipe', 'ignore'],
+          encoding: 'utf8'
+        });
+
+        // Parse the JSON output
+        const bunLsData = JSON.parse(bunLsOutput);
+        const resolvedDependencies: Record<string, string> = {};
+
+        // Process the dependencies from bun pm ls
+        if (bunLsData && bunLsData.packages) {
+          Object.entries(bunLsData.packages).forEach(([pkgName, pkgInfo]: [string, any]) => {
+            if (pkgName && pkgInfo && pkgInfo.version) {
+              // Remove the package scope from the name if it exists
+              const simpleName = pkgName.split('/').pop() || pkgName;
+              resolvedDependencies[simpleName] = pkgInfo.version;
+            }
+          });
+
+          logger.debug(`Resolved ${Object.keys(resolvedDependencies).length} dependencies from Bun`);
+          return resolvedDependencies;
+        }
+      } catch (error) {
+        logger.debug(`Failed to get resolved versions from Bun: ${error}`);
+        logger.debug('Falling back to package.json dependencies');
+      }
+
+      // If we couldn't get the resolved versions, return the dependencies from package.json
+      return dependencies;
+    } catch (error) {
+      logger.error(`Failed to parse Bun lockfile: ${error}`);
+      throw error;
     }
   }
 
@@ -409,7 +527,33 @@ await cache.init();
         context.packageManager = this.options.packageManager;
       }
 
-      console.log(chalk.gray(`→ Using package manager: ${this.options.packageManager}`));
+      // Check if the package manager is installed
+      if (!this.isPackageManagerInstalled(this.options.packageManager)) {
+        logger.warn(`Package manager ${chalk.bold(this.options.packageManager)} is not installed.`);
+
+        // Try to find an installed package manager
+        const availablePackageManagers = [
+          PackageManager.NPM,
+          PackageManager.YARN,
+          PackageManager.PNPM,
+          PackageManager.BUN
+        ].filter(pm => this.isPackageManagerInstalled(pm));
+
+        if (availablePackageManagers.length > 0) {
+          const fallbackPackageManager = availablePackageManagers[0];
+          logger.warn(`Falling back to ${chalk.bold(fallbackPackageManager)}`);
+          this.options.packageManager = fallbackPackageManager;
+          context.packageManager = fallbackPackageManager;
+        } else {
+          logger.error('No supported package managers found. Please install npm, yarn, pnpm, or bun.');
+          return false;
+        }
+      }
+
+      // Get package manager version
+      const packageManagerVersion = this.getPackageManagerVersion(this.options.packageManager);
+
+      console.log(chalk.gray(`→ Using package manager: ${chalk.bold(this.options.packageManager)}${packageManagerVersion ? ` v${packageManagerVersion}` : ''}`));
 
       // Check for workspaces
       let hasWorkspaces = false;
@@ -914,12 +1058,13 @@ await cache.init();
           installed++;
         } catch (directError) {
           // Fall back to package manager if direct download fails
-          spinner.setMessage(`Falling back to npm for ${name}@${version}`);
+          spinner.setMessage(`Falling back to ${this.options.packageManager} for ${name}@${version}`);
 
           const cmd = {
             [PackageManager.NPM]: `npm install ${name}@${version} --no-save`,
             [PackageManager.YARN]: `yarn add ${name}@${version} --no-save`,
-            [PackageManager.PNPM]: `pnpm add ${name}@${version} --no-save`
+            [PackageManager.PNPM]: `pnpm add ${name}@${version} --no-save`,
+            [PackageManager.BUN]: `bun add ${name}@${version} --no-save`
           }[this.options.packageManager];
 
           execSync(cmd, { cwd: projectDir, stdio: 'ignore' });
@@ -1464,7 +1609,8 @@ await cache.init();
           const cmd = {
             [PackageManager.NPM]: 'npm',
             [PackageManager.YARN]: 'yarn',
-            [PackageManager.PNPM]: 'pnpm'
+            [PackageManager.PNPM]: 'pnpm',
+            [PackageManager.BUN]: 'bun'
           }[this.options.packageManager];
 
           const args = [
@@ -1473,8 +1619,24 @@ await cache.init();
             '--no-save'
           ];
 
+          // Add registry option with the appropriate flag for each package manager
           if (this.options.registry) {
-            args.push('--registry', this.options.registry);
+            switch (this.options.packageManager) {
+              case PackageManager.NPM:
+                args.push('--registry', this.options.registry);
+                break;
+              case PackageManager.YARN:
+                args.push('--registry', this.options.registry);
+                break;
+              case PackageManager.PNPM:
+                args.push('--registry', this.options.registry);
+                break;
+              case PackageManager.BUN:
+                args.push('--registry', this.options.registry);
+                break;
+              default:
+                args.push('--registry', this.options.registry);
+            }
           }
 
           logger.debug(`Running: ${cmd} ${args.join(' ')} in ${pkg.directory}`);
@@ -1510,13 +1672,15 @@ await cache.init();
       const cmd = {
         [PackageManager.NPM]: 'npm',
         [PackageManager.YARN]: 'yarn',
-        [PackageManager.PNPM]: 'pnpm'
+        [PackageManager.PNPM]: 'pnpm',
+        [PackageManager.BUN]: 'bun'
       }[this.options.packageManager];
 
       const args = {
         [PackageManager.NPM]: ['run', script],
         [PackageManager.YARN]: ['run', script],
-        [PackageManager.PNPM]: ['run', script]
+        [PackageManager.PNPM]: ['run', script],
+        [PackageManager.BUN]: ['run', script]
       }[this.options.packageManager];
 
       const child = spawn(cmd, args, {
