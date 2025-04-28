@@ -20,7 +20,7 @@ Welcome to the flash-install documentation. Here you'll find comprehensive guide
 ## Advanced Features
 
 * [Cloud Cache](cloud-cache.md) - Share caches across machines and teams
-* [Plugins](plugins.md) - Extend flash-install with plugins
+* [Enhanced Plugin System](enhanced-plugin-system.md) - Extend flash-install with plugins
 * [Hooks](hooks.md) - Use lifecycle hooks for custom behavior
 * [CI/CD Integration](ci-cd.md) - Integrate with CI/CD pipelines
 

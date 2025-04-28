@@ -12,7 +12,8 @@ import { snapshot, SnapshotFormat, Snapshot } from './snapshot.js';
 import { cache } from './cache.js';
 import * as fsUtils from './utils/fs.js';
 import { sync, Sync } from './sync.js';
-import { pluginManager } from './plugin.js';
+import { pluginManager, PluginHook } from './plugin.js';
+import { registerPluginCommands } from './plugin-commands.js';
 import { NetworkStatus, networkManager } from './utils/network.js';
 import { Spinner } from './utils/progress.js';
 import { cloudCache, SyncPolicy, CloudCacheConfig } from './cloud/cloud-cache.js';
@@ -1147,65 +1148,8 @@ program
     }
   });
 
-// Plugin commands
-const pluginCommand = program
-  .command('plugin')
-  .description('Manage plugins');
-
-pluginCommand
-  .command('add')
-  .description('Add a plugin')
-  .argument('<path>', 'Path to plugin')
-  .action(async (pluginPath) => {
-    await pluginManager.init();
-    const success = await pluginManager.addPlugin(path.resolve(pluginPath));
-
-    if (!success) {
-      process.exit(1);
-    }
-  });
-
-pluginCommand
-  .command('remove')
-  .description('Remove a plugin')
-  .argument('<name>', 'Plugin name')
-  .action(async (pluginName) => {
-    await pluginManager.init();
-    const success = await pluginManager.removePlugin(pluginName);
-
-    if (!success) {
-      process.exit(1);
-    }
-  });
-
-pluginCommand
-  .command('list')
-  .description('List installed plugins')
-  .action(async () => {
-    await pluginManager.init();
-    const plugins = pluginManager.listPlugins();
-
-    console.log(chalk.cyan('\n⚡ Flash Install Plugins\n'));
-
-    if (plugins.length === 0) {
-      console.log('No plugins installed');
-    } else {
-      for (const plugin of plugins) {
-        console.log(`${chalk.bold(plugin.name)} v${plugin.version}`);
-
-        if (plugin.description) {
-          console.log(`  ${plugin.description}`);
-        }
-
-        if (plugin.author) {
-          console.log(`  Author: ${plugin.author}`);
-        }
-
-        console.log('');
-      }
-    }
-  });
-
+// Register plugin commands
+registerPluginCommands(program);
 // Add command
 program
   .command('add')

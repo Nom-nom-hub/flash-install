@@ -24,7 +24,7 @@ A fast, drop-in replacement for `npm install`, focused on drastically speeding u
 - **Checksum Validation**: Verifies package integrity against npm registry checksums
 - **Snapshot Fingerprinting**: Auto-invalidates snapshots when lockfiles change
 - **Sync Command**: Efficiently updates dependencies without full reinstallation
-- **Plugin System**: Extensible architecture with lifecycle hooks
+- **Enhanced Plugin System**: Extensible architecture with lifecycle hooks, auto-discovery, and plugin registry
 - **Cloud Cache Integration**: Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities
 - **Dependency Analysis**: Visualization of dependency graphs, detection of duplicates, and size analysis
 
@@ -431,6 +431,7 @@ For more detailed documentation, see the [docs](docs) directory.
 - [Offline Mode](docs/offline-mode.md) - Work without an internet connection
 - [Dependency Analysis](docs/dependency-analysis.md) - Analyze and visualize dependencies
 - [Cloud Cache](docs/cloud-cache.md) - Share caches across machines and teams
+- [Enhanced Plugin System](docs/enhanced-plugin-system.md) - Extend flash-install with plugins
 
 ## License
 
