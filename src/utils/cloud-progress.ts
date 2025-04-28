@@ -64,6 +64,14 @@ export class CloudProgress {
   }
 
   /**
+   * Update the progress message (alias for updateStatus)
+   * @param message New message
+   */
+  update(message: string): void {
+    this.updateStatus(message);
+  }
+
+  /**
    * Set the progress status (alias for updateStatus)
    * @param message New status message
    */

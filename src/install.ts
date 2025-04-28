@@ -24,6 +24,7 @@ import { InstallOptions as TypedInstallOptions, PackageDependency as TypedPackag
 import { NetworkStatus, networkManager } from './utils/network.js';
 import { fallbackManager, FallbackResult } from './utils/fallback.js';
 import { CloudCacheConfig } from './cloud/cloud-cache.js';
+import { ErrorHandler, FlashError, ErrorCategory, RecoveryStrategy } from './utils/error-handler.js';
 // Import version from package.json
 const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const version = packageJson.version;
@@ -369,10 +370,20 @@ await cache.init();
    * @returns True if successful
    */
   async install(projectDir: string): Promise<boolean> {
-    try {
-      // Start overall timer
-      const totalTimer = createTimer();
+    // Start overall timer
+    const totalTimer = createTimer();
 
+    // Create context for error handling
+    const context = {
+      projectDir,
+      packageManager: this.options.packageManager,
+      includeDevDependencies: this.options.includeDevDependencies,
+      offline: this.options.offline,
+      useCache: this.options.useCache,
+      concurrency: this.options.concurrency
+    };
+
+    try {
       // Print banner
       console.log(chalk.cyan(`
 ⚡ flash-install v${version}
@@ -381,11 +392,21 @@ await cache.init();
       console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
 
       // Initialize plugin manager with the correct project directory
-      await pluginManager.init(projectDir);
+      await ErrorHandler.withErrorHandling(
+        async () => await pluginManager.init(projectDir),
+        { ...context, operation: 'plugin-init' },
+        {
+          maxRetries: 2,
+          onRetry: (error, attempt) => {
+            logger.warn(`Retrying plugin initialization (attempt ${attempt}/2)`);
+          }
+        }
+      );
 
       // Detect package manager if not specified
       if (!this.options.packageManager) {
         this.options.packageManager = this.detectPackageManager(projectDir);
+        context.packageManager = this.options.packageManager;
       }
 
       console.log(chalk.gray(`→ Using package manager: ${this.options.packageManager}`));
@@ -394,31 +415,71 @@ await cache.init();
       let hasWorkspaces = false;
       if (this.options.workspace?.enabled) {
         console.log(chalk.gray(`→ Checking for workspaces...`));
-        hasWorkspaces = await workspaceManager.init(projectDir);
 
-        if (hasWorkspaces) {
-          console.log(chalk.cyan(`✓ Found ${chalk.bold(workspaceManager.getPackages().length.toString())} workspace packages`));
-        } else {
-          console.log(chalk.gray(`→ No workspaces found, continuing with regular installation`));
+        try {
+          hasWorkspaces = await ErrorHandler.withErrorHandling(
+            async () => await workspaceManager.init(projectDir),
+            { ...context, operation: 'workspace-init' },
+            { maxRetries: 2 }
+          );
+
+          if (hasWorkspaces) {
+            console.log(chalk.cyan(`✓ Found ${chalk.bold(workspaceManager.getPackages().length.toString())} workspace packages`));
+          } else {
+            console.log(chalk.gray(`→ No workspaces found, continuing with regular installation`));
+          }
+        } catch (error) {
+          // If workspace initialization fails, continue with regular installation
+          if (error instanceof FlashError) {
+            logger.warn(`Workspace initialization failed: ${error.message}`);
+            logger.warn('Continuing with regular installation');
+          } else {
+            throw error;
+          }
         }
       }
 
       // Parse package.json
       const parseTimer = createTimer();
       console.log(chalk.gray(`→ Parsing package.json...`));
-      const pkg = await this.parsePackageJson(projectDir);
+
+      const pkg = await ErrorHandler.withErrorHandling(
+        async () => await this.parsePackageJson(projectDir),
+        { ...context, operation: 'parse-package-json' },
+        {
+          maxRetries: 3,
+          retryDelay: 500,
+          onRetry: (error, attempt) => {
+            logger.warn(`Retrying package.json parsing (attempt ${attempt}/3)`);
+          }
+        }
+      );
+
       logger.debug(`Parsed package.json in ${parseTimer.getElapsedFormatted()}`);
 
       // Parse lockfile
       let dependencies: Record<string, string>;
       const lockfileTimer = createTimer();
+
       try {
         console.log(chalk.gray(`→ Parsing lockfile...`));
-        dependencies = await this.parseLockfile(projectDir, this.options.packageManager);
+
+        dependencies = await ErrorHandler.withErrorHandling(
+          async () => await this.parseLockfile(projectDir, this.options.packageManager),
+          { ...context, operation: 'parse-lockfile' },
+          { maxRetries: 2 }
+        );
+
         logger.debug(`Parsed lockfile in ${lockfileTimer.getElapsedFormatted()}`);
       } catch (error) {
-        console.log(chalk.yellow(`⚠ Failed to parse lockfile: ${error}`));
-        console.log(chalk.yellow(`⚠ Falling back to package.json dependencies`));
+        // Handle lockfile parsing errors with graceful fallback
+        if (error instanceof FlashError) {
+          logger.warn(`${error.message} (${error.category})`);
+        } else {
+          logger.warn(`Failed to parse lockfile: ${error}`);
+        }
+
+        logger.warn(`Falling back to package.json dependencies`);
         dependencies = { ...pkg.dependencies };
 
         if (this.options.includeDevDependencies) {
@@ -963,15 +1024,35 @@ await cache.init();
       // Update progress status
       progress.updateStatus(`Batch ${currentBatch}/${totalBatches}`)
 
-      // Execute batch
+      // Execute batch with enhanced error handling
       const batchResults = await Promise.all(
         batch.map(async (task) => {
-          try {
-            // Update progress with current package
-            lastPackage = `${task.name}@${task.version}`;
-            progress.updateStatus(`Installing ${chalk.green(lastPackage)} (${installed}/${totalPackages})`);
+          // Create context for error handling
+          const taskContext = {
+            package: task.name,
+            version: task.version,
+            path: task.path,
+            operation: 'install-package'
+          };
 
-            const result = await this.workerPool!.execute(task);
+          // Update progress with current package
+          lastPackage = `${task.name}@${task.version}`;
+          progress.updateStatus(`Installing ${chalk.green(lastPackage)} (${installed}/${totalPackages})`);
+
+          try {
+            // Use error handling wrapper for package installation
+            const result = await ErrorHandler.withErrorHandling(
+              async () => await this.workerPool!.execute(task),
+              taskContext,
+              {
+                maxRetries: 2,
+                retryDelay: 1000,
+                onRetry: (error, attempt) => {
+                  logger.warn(`Retrying installation of ${task.name}@${task.version} (attempt ${attempt}/2)`);
+                  progress.updateStatus(`Retrying ${chalk.yellow(lastPackage)} (attempt ${attempt}/2)`);
+                }
+              }
+            );
 
             if (result) {
               installed++;
@@ -985,8 +1066,26 @@ await cache.init();
             return result;
           } catch (error) {
             failed++;
-            // Log error
-            console.log(chalk.red(`✗ Error installing ${chalk.bold(task.name)}@${chalk.bold(task.version)}: ${error}`));
+
+            // Enhanced error reporting
+            if (error instanceof FlashError) {
+              // Categorized error with recovery information
+              console.log(chalk.red(`✗ Error installing ${chalk.bold(task.name)}@${chalk.bold(task.version)}: ${error.message}`));
+              logger.debug(`Error category: ${error.category}, Recovery strategy: ${error.recoveryStrategy}`);
+
+              // For specific error categories, provide more helpful messages
+              if (error.category === ErrorCategory.NETWORK) {
+                console.log(chalk.yellow(`  → Network issue detected. Check your internet connection.`));
+              } else if (error.category === ErrorCategory.PACKAGE_NOT_FOUND) {
+                console.log(chalk.yellow(`  → Package not found. Check the package name and version.`));
+              } else if (error.category === ErrorCategory.DISK_SPACE) {
+                console.log(chalk.yellow(`  → Disk space issue. Free up some space and try again.`));
+              }
+            } else {
+              // Generic error
+              console.log(chalk.red(`✗ Error installing ${chalk.bold(task.name)}@${chalk.bold(task.version)}: ${error}`));
+            }
+
             return false;
           }
         })

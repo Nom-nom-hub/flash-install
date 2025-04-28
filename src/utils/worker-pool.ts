@@ -94,8 +94,26 @@ export class WorkerPool<T, R> {
    * Get current memory usage
    * @returns Memory usage in bytes
    */
-  private getMemoryUsage(): number {
-    return process.memoryUsage().heapUsed;
+  /**
+   * Get detailed memory usage information
+   * @returns Object with memory usage details
+   */
+  private getMemoryUsage(): {
+    heapUsed: number;
+    heapTotal: number;
+    rss: number;
+    external: number;
+    percentUsed: number;
+  } {
+    const memInfo = process.memoryUsage();
+    const totalMemory = os.totalmem();
+    return {
+      heapUsed: memInfo.heapUsed,
+      heapTotal: memInfo.heapTotal,
+      rss: memInfo.rss,
+      external: memInfo.external,
+      percentUsed: (memInfo.heapUsed / totalMemory) * 100
+    };
   }
 
   /**
@@ -103,48 +121,113 @@ export class WorkerPool<T, R> {
    * @returns True if memory usage is above threshold
    */
   private isMemoryUsageHigh(): boolean {
-    const memoryUsage = this.getMemoryUsage();
-    return memoryUsage > this.memoryThreshold;
+    const memoryInfo = this.getMemoryUsage();
+    return memoryInfo.heapUsed > this.memoryThreshold;
+  }
+
+  /**
+   * Check if memory usage is critically high
+   * @returns True if memory usage is critically high (above 90% of limit)
+   */
+  private isMemoryUsageCritical(): boolean {
+    const memoryInfo = this.getMemoryUsage();
+    return memoryInfo.heapUsed > this.memoryLimit * 0.9;
   }
 
   /**
    * Adjust batch size based on memory usage and task timings
+   * Uses a more sophisticated algorithm to prevent memory issues
    */
   private adjustBatchSize(): void {
-    const memoryUsage = this.getMemoryUsage();
-    this.memoryUsageHistory.push(memoryUsage);
+    const memoryInfo = this.getMemoryUsage();
+    this.memoryUsageHistory.push(memoryInfo.heapUsed);
 
-    // Keep history limited to last 10 measurements
-    if (this.memoryUsageHistory.length > 10) {
+    // Keep history limited to last 15 measurements for better trend analysis
+    if (this.memoryUsageHistory.length > 15) {
       this.memoryUsageHistory.shift();
     }
 
-    // Calculate memory trend (positive = increasing, negative = decreasing)
-    const memoryTrend = this.memoryUsageHistory.length > 1
-      ? (this.memoryUsageHistory[this.memoryUsageHistory.length - 1] - this.memoryUsageHistory[0])
-      : 0;
+    // Calculate memory trend using linear regression for more accuracy
+    let memoryTrend = 0;
+    if (this.memoryUsageHistory.length > 5) {
+      const n = this.memoryUsageHistory.length;
+      const indices = Array.from({ length: n }, (_, i) => i);
+      const sumX = indices.reduce((sum, x) => sum + x, 0);
+      const sumY = this.memoryUsageHistory.reduce((sum, y) => sum + y, 0);
+      const sumXY = indices.reduce((sum, x, i) => sum + x * this.memoryUsageHistory[i], 0);
+      const sumXX = indices.reduce((sum, x) => sum + x * x, 0);
 
-    // Calculate average task time
-    const avgTaskTime = this.taskTimings.length > 0
-      ? this.taskTimings.reduce((sum, time) => sum + time, 0) / this.taskTimings.length
-      : 0;
+      // Calculate slope of the trend line (bytes per step)
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      memoryTrend = slope;
+    } else {
+      // Fallback to simple trend calculation if not enough data points
+      memoryTrend = this.memoryUsageHistory.length > 1
+        ? (this.memoryUsageHistory[this.memoryUsageHistory.length - 1] - this.memoryUsageHistory[0])
+        : 0;
+    }
 
-    // Adjust batch size based on memory usage and trend
-    if (memoryUsage > this.memoryThreshold || memoryTrend > 0) {
-      // Reduce batch size if memory usage is high or increasing
-      this.batchSize = Math.max(this.minBatchSize, Math.floor(this.batchSize * 0.8));
-      logger.debug(`Reducing batch size to ${this.batchSize} due to high memory usage`);
+    // Calculate average task time with outlier removal
+    let avgTaskTime = 0;
+    if (this.taskTimings.length > 0) {
+      // Sort timings and remove outliers (top and bottom 10% if we have enough samples)
+      const sortedTimings = [...this.taskTimings].sort((a, b) => a - b);
+      const trimAmount = this.taskTimings.length > 10 ? Math.floor(this.taskTimings.length * 0.1) : 0;
+      const trimmedTimings = sortedTimings.slice(trimAmount, sortedTimings.length - trimAmount);
+
+      // Calculate average of trimmed timings
+      avgTaskTime = trimmedTimings.reduce((sum, time) => sum + time, 0) / trimmedTimings.length;
+    }
+
+    // Log detailed memory information periodically
+    logger.debug(`Memory usage: ${(memoryInfo.heapUsed / 1024 / 1024).toFixed(2)}MB / ${(memoryInfo.heapTotal / 1024 / 1024).toFixed(2)}MB (${memoryInfo.percentUsed.toFixed(1)}%)`);
+    logger.debug(`Memory trend: ${(memoryTrend > 0 ? '+' : '')}${(memoryTrend / 1024 / 1024).toFixed(2)}MB per step`);
+    logger.debug(`Average task time: ${avgTaskTime.toFixed(2)}ms`);
+
+    // Determine adjustment factor based on memory conditions
+    let adjustmentFactor = 1.0;
+
+    // Critical memory condition - aggressive reduction
+    if (this.isMemoryUsageCritical()) {
+      adjustmentFactor = 0.5; // Reduce by 50%
+      logger.warn(`Critical memory usage detected (${memoryInfo.percentUsed.toFixed(1)}%), aggressively reducing batch size`);
+
+      // Force garbage collection in critical situations
+      if (global.gc) {
+        logger.debug('Running garbage collection due to critical memory usage');
+        global.gc();
+      }
+
+      // Add a brief pause to allow memory to be reclaimed
+      setTimeout(() => {}, 500);
+    }
+    // High memory usage - moderate reduction
+    else if (this.isMemoryUsageHigh() || memoryTrend > 5 * 1024 * 1024) { // Trend increasing by more than 5MB per step
+      adjustmentFactor = 0.8; // Reduce by 20%
+      logger.debug(`High memory usage or increasing trend, reducing batch size`);
 
       // Run garbage collection if available
       if (global.gc) {
-        logger.debug('Running garbage collection');
+        logger.debug('Running garbage collection due to high memory usage');
         global.gc();
       }
-    } else if (memoryUsage < this.memoryThreshold * 0.7 && avgTaskTime < 1000) {
-      // Increase batch size if memory usage is low and tasks are fast
-      this.batchSize = Math.min(this.maxBatchSize, Math.floor(this.batchSize * 1.2));
-      logger.debug(`Increasing batch size to ${this.batchSize}`);
     }
+    // Low memory usage and fast tasks - increase
+    else if (memoryInfo.heapUsed < this.memoryThreshold * 0.6 && avgTaskTime < 500 && memoryTrend < 1 * 1024 * 1024) {
+      adjustmentFactor = 1.2; // Increase by 20%
+      logger.debug(`Low memory usage and fast tasks, increasing batch size`);
+    }
+    // Moderate memory usage but fast tasks - slight increase
+    else if (memoryInfo.heapUsed < this.memoryThreshold * 0.75 && avgTaskTime < 800) {
+      adjustmentFactor = 1.1; // Increase by 10%
+      logger.debug(`Moderate memory usage but fast tasks, slightly increasing batch size`);
+    }
+
+    // Apply adjustment with bounds checking
+    const newBatchSize = Math.floor(this.batchSize * adjustmentFactor);
+    this.batchSize = Math.max(this.minBatchSize, Math.min(this.maxBatchSize, newBatchSize));
+
+    logger.debug(`Adjusted batch size to ${this.batchSize}`);
   }
 
   /**
@@ -257,11 +340,11 @@ export class WorkerPool<T, R> {
       processedCount += batch.length;
 
       // Check memory usage after batch
-      const memoryUsage = this.getMemoryUsage();
-      logger.debug(`Memory usage: ${Math.round(memoryUsage / 1024 / 1024)}MB`);
+      const memoryInfo = this.getMemoryUsage();
+      logger.debug(`Memory usage: ${Math.round(memoryInfo.heapUsed / 1024 / 1024)}MB`);
 
       // If memory usage is very high, pause briefly to allow GC
-      if (memoryUsage > this.memoryLimit * 0.9) {
+      if (memoryInfo.heapUsed > this.memoryLimit * 0.9) {
         logger.warn('Memory usage is very high, pausing to allow garbage collection');
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -295,37 +378,96 @@ export class WorkerPool<T, R> {
 
 /**
  * Create a worker function that can be used with the worker pool
- * This version includes memory optimization and error handling
+ * Enhanced version with improved memory management and error handling
  */
 export function createWorkerFunction<T, R>(fn: (data: T) => Promise<R> | R): (data: T) => Promise<R> {
   return async (data: T): Promise<R> => {
+    // Track start time for performance monitoring
+    const startTime = performance.now();
+
     try {
       // Check memory usage before executing task
-      const memoryBefore = process.memoryUsage().heapUsed;
+      const memoryBefore = process.memoryUsage();
+      const totalMemory = os.totalmem();
+      const memoryPercentBefore = (memoryBefore.heapUsed / totalMemory) * 100;
 
-      // Execute the function
-      const result = await fn(data);
+      // Check if memory is already high before starting task
+      if (memoryPercentBefore > 80) {
+        logger.warn(`High memory usage detected before task execution: ${memoryPercentBefore.toFixed(1)}%`);
 
-      // Check memory usage after executing task
-      const memoryAfter = process.memoryUsage().heapUsed;
-      const memoryDiff = memoryAfter - memoryBefore;
+        // Run garbage collection if available
+        if (global.gc) {
+          logger.debug('Running garbage collection before memory-intensive task');
+          global.gc();
+        }
 
-      // Log memory usage if significant
-      if (memoryDiff > 10 * 1024 * 1024) { // 10MB
-        logger.debug(`Task used ${Math.round(memoryDiff / 1024 / 1024)}MB of memory`);
+        // Brief pause to allow memory to be reclaimed
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
+      // Execute the function with timeout protection for long-running tasks
+      const timeoutPromise = new Promise<R>((_, reject) => {
+        const timeout = setTimeout(() => {
+          clearTimeout(timeout);
+          reject(new Error('Task execution timed out (30s)'));
+        }, 30000); // 30 second timeout
+      });
+
+      // Race between the actual task and the timeout
+      const result = await Promise.race([fn(data), timeoutPromise]);
+
+      // Check memory usage after executing task
+      const memoryAfter = process.memoryUsage();
+      const memoryDiff = memoryAfter.heapUsed - memoryBefore.heapUsed;
+      const memoryPercentAfter = (memoryAfter.heapUsed / totalMemory) * 100;
+      const memoryPercentChange = memoryPercentAfter - memoryPercentBefore;
+
+      // Calculate execution time
+      const executionTime = performance.now() - startTime;
+
+      // Log detailed memory usage for significant changes
+      if (memoryDiff > 10 * 1024 * 1024 || memoryPercentChange > 1) { // 10MB or 1% change
+        logger.debug(`Task memory usage: ${(memoryDiff / 1024 / 1024).toFixed(2)}MB (${memoryPercentChange.toFixed(1)}% change)`);
+        logger.debug(`Task execution time: ${executionTime.toFixed(2)}ms`);
+      }
+
+      // Adaptive garbage collection threshold based on total memory
+      // For systems with less memory, we trigger GC more aggressively
+      const gcThresholdMB = totalMemory < 4 * 1024 * 1024 * 1024 ? 30 : 50; // 30MB for <4GB systems, 50MB otherwise
+
       // Run garbage collection if memory usage increased significantly
-      if (memoryDiff > 50 * 1024 * 1024 && global.gc) { // 50MB
-        logger.debug('Running garbage collection after memory-intensive task');
+      if ((memoryDiff > gcThresholdMB * 1024 * 1024 || memoryPercentAfter > 75) && global.gc) {
+        logger.debug(`Running garbage collection after memory-intensive task (${(memoryDiff / 1024 / 1024).toFixed(2)}MB used)`);
         global.gc();
       }
 
       return result;
     } catch (error) {
-      // Log error and rethrow
-      logger.error(`Worker function error: ${error}`);
-      throw error;
+      // Calculate execution time even for failed tasks
+      const executionTime = performance.now() - startTime;
+
+      // Enhanced error logging with more context
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      logger.error(`Worker function error after ${executionTime.toFixed(2)}ms: ${errorMessage}`);
+
+      if (errorStack) {
+        logger.debug(`Error stack: ${errorStack}`);
+      }
+
+      // Categorize errors for better handling
+      if (errorMessage.includes('ENOENT')) {
+        throw new Error(`File not found error: ${errorMessage}`);
+      } else if (errorMessage.includes('EACCES') || errorMessage.includes('EPERM')) {
+        throw new Error(`Permission error: ${errorMessage}`);
+      } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timed out')) {
+        throw new Error(`Timeout error: ${errorMessage}`);
+      } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND')) {
+        throw new Error(`Network error: ${errorMessage}`);
+      } else {
+        throw error; // Rethrow original error for other cases
+      }
     }
   };
 }

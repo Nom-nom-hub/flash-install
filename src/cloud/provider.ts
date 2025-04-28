@@ -112,6 +112,59 @@ export interface CloudProvider {
    * @param remotePath Remote file path
    */
   getFileMetadata(remotePath: string): Promise<CloudFileMetadata | null>;
+
+  /**
+   * Upload a buffer to the cloud
+   * @param buffer Buffer to upload
+   * @param remotePath Remote file path
+   */
+  uploadBuffer?(buffer: Buffer, remotePath: string): Promise<void>;
+
+  /**
+   * Upload a large file to the cloud with progress reporting
+   * @param localPath Local file path
+   * @param remotePath Remote file path
+   * @param progressCallback Callback for progress updates
+   */
+  uploadLargeFile?(localPath: string, remotePath: string, progressCallback?: (percent: number) => void): Promise<void>;
+
+  /**
+   * Download a large file from the cloud with progress reporting
+   * @param remotePath Remote file path
+   * @param localPath Local file path
+   * @param progressCallback Callback for progress updates
+   */
+  downloadLargeFile?(remotePath: string, localPath: string, progressCallback?: (percent: number) => void): Promise<void>;
+
+  /**
+   * Initialize a multipart upload
+   * @param remotePath Remote file path
+   */
+  initMultipartUpload?(remotePath: string): Promise<string>;
+
+  /**
+   * Upload a part of a multipart upload
+   * @param buffer Buffer containing the part data
+   * @param remotePath Remote file path
+   * @param uploadId Upload ID from initMultipartUpload
+   * @param partNumber Part number (1-based)
+   */
+  uploadPart?(buffer: Buffer, remotePath: string, uploadId: string, partNumber: number): Promise<any>;
+
+  /**
+   * Complete a multipart upload
+   * @param remotePath Remote file path
+   * @param uploadId Upload ID from initMultipartUpload
+   * @param parts Parts metadata from uploadPart
+   */
+  completeMultipartUpload?(remotePath: string, uploadId: string, parts: any[]): Promise<void>;
+
+  /**
+   * Abort a multipart upload
+   * @param remotePath Remote file path
+   * @param uploadId Upload ID from initMultipartUpload
+   */
+  abortMultipartUpload?(remotePath: string, uploadId: string): Promise<void>;
 }
 
 /**
