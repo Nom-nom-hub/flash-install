@@ -12,7 +12,7 @@
     "flash-install-direct": "dist/cli-direct.js"
   },
   "scripts": {
-    "build": "tsc && node build.js",
+    "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "ts-node --esm src/cli.ts",
     "test": "jest --config=jest.config.cjs",
@@ -25,8 +25,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/postinstall.js",
-    "publish-package": "./scripts/publish.sh",
-    "vercel-build": "node build.js"
+    "publish-package": "./scripts/publish.sh"
   },
   "keywords": [
     "npm",
