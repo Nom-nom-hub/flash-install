@@ -2,7 +2,11 @@
 
 This document outlines the planned features and improvements for upcoming releases of flash-install.
 
-## Next Release (v1.x.x)
+## Current Release (v1.4.x)
+
+All high and medium priority features have been completed! 🎉
+
+## Next Release (v1.5.x)
 
 ### High Priority Features
 
@@ -42,12 +46,19 @@ This document outlines the planned features and improvements for upcoming releas
   - [x] Implement a sync command for manual cache synchronization
   - [x] Add team permissions and access controls
 
+### High Priority Features
+
 - [ ] **Enhanced Plugin System**
   - Additional lifecycle hooks
   - Plugin discovery and auto-loading
   - Official plugin registry
 
-### Low Priority Features
+- [ ] **Stability and Performance Improvements**
+  - Further reduce memory usage
+  - Optimize cloud cache operations
+  - Improve error handling and recovery
+
+### Medium Priority Features
 
 - [ ] **Interactive CLI Mode**
   - TUI (Text User Interface) for managing dependencies
@@ -59,15 +70,22 @@ This document outlines the planned features and improvements for upcoming releas
   - Support for Bun package manager
   - Custom registry support improvements
 
+### Low Priority Features
+
+- [ ] **Additional Cloud Providers**
+  - Support for more cloud storage providers
+  - Enhanced cloud provider configuration options
+  - Multi-region support
+
 ## Future Considerations
 
 - **Language Support Beyond JavaScript**
   - Experimental support for other package ecosystems (Python, Ruby, etc.)
 
 - **Enterprise Features**
-  - Role-based access control for shared caches
-  - Compliance reporting for dependencies
+  - Advanced compliance reporting for dependencies
   - Private registry integration improvements
+  - Enterprise-grade security features
 
 ## Contributing
 
