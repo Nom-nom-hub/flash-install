@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build && mkdir -p public && cp -r docs/* public/",
+  "outputDirectory": "public",
+  "github": {
+    "silent": true
+  }
+}
