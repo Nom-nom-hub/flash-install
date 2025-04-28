@@ -398,16 +398,24 @@
             <p>Installs packages in parallel using Node.js worker threads, maximizing your system's capabilities</p>
         </div>
         <div class="feature">
-            <h3>🔒 Offline Mode</h3>
-            <p>Install dependencies without internet connection using cache or snapshots, ideal for air-gapped environments</p>
+            <h3>🔒 Enhanced Offline Mode</h3>
+            <p>Install dependencies without internet connection with intelligent network detection and fallback strategies</p>
         </div>
         <div class="feature">
             <h3>✅ Checksum Validation</h3>
             <p>Verifies package integrity against npm registry checksums, ensuring security and reliability</p>
         </div>
         <div class="feature">
-            <h3>🔌 Plugin System</h3>
-            <p>Extensible architecture with lifecycle hooks for custom workflows and integrations</p>
+            <h3>🔌 Enhanced Plugin System</h3>
+            <p>Extensible architecture with lifecycle hooks, auto-discovery, and plugin registry for custom workflows and integrations</p>
+        </div>
+        <div class="feature">
+            <h3>☁️ Cloud Cache Integration</h3>
+            <p>Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities</p>
+        </div>
+        <div class="feature">
+            <h3>📊 Dependency Analysis</h3>
+            <p>Visualization of dependency graphs, detection of duplicates, and size analysis</p>
         </div>
     </div>
 
@@ -434,7 +442,18 @@ flash-install clean
 flash-install clean-modules
 
 <span class="code-comment"># Clean only snapshot (preserves node_modules)</span>
-flash-install clean-snapshot</code></pre>
+flash-install clean-snapshot
+
+<span class="code-comment"># Sync dependencies without full reinstall</span>
+flash-install sync
+
+<span class="code-comment"># Analyze dependencies</span>
+flash-install analyze
+
+<span class="code-comment"># Manage plugins</span>
+flash-install plugin list
+flash-install plugin add <path>
+flash-install plugin install <name></code></pre>
     </div>
 
     <div class="section">
@@ -487,32 +506,32 @@ flash-install clean-snapshot</code></pre>
         <h2 class="section-title">Advanced Features</h2>
         <div class="feature-grid">
             <div class="feature-card">
-                <h3><strong>Intelligent Cleaning</strong></h3>
-                <p>Granular control over cleanup operations - selectively clean node_modules, snapshots, or both with smart detection of what needs cleaning.</p>
+                <h3><strong>Enhanced Plugin System</strong></h3>
+                <p>Powerful plugin system with lifecycle hooks, auto-discovery, and an official plugin registry. Create custom plugins to extend functionality, manage them with commands, and share them via npm.</p>
             </div>
             <div class="feature-card">
-                <h3><strong>Advanced Cache Management</strong></h3>
-                <p>Sophisticated caching system with automatic optimization, integrity verification, and pruning of unused packages.</p>
+                <h3><strong>Cloud Cache Integration</strong></h3>
+                <p>Share caches across machines and teams using S3, Azure, or GCP storage. Configure sync policies, team permissions, and automatic invalidation based on lockfile changes.</p>
             </div>
             <div class="feature-card">
-                <h3><strong>Extensible Plugin Architecture</strong></h3>
-                <p>Powerful plugin system with lifecycle hooks for custom build steps, security scanning, and more.</p>
+                <h3><strong>Monorepo Support</strong></h3>
+                <p>Enhanced workspace detection, parallel installation across workspaces, and intelligent dependency hoisting for better monorepo performance.</p>
             </div>
             <div class="feature-card">
-                <h3><strong>True Offline Development</strong></h3>
-                <p>Continue working without internet using intelligent caching and snapshot restoration.</p>
+                <h3><strong>Dependency Analysis</strong></h3>
+                <p>Visualize dependency graphs, detect duplicates, analyze package sizes, and generate reports in various formats to understand your project dependencies.</p>
             </div>
             <div class="feature-card">
-                <h3><strong>Flexible Snapshot System</strong></h3>
-                <p>Multiple compression formats optimized for different use cases - from maximum speed to minimum size.</p>
+                <h3><strong>Snapshot Fingerprinting</strong></h3>
+                <p>Auto-invalidates snapshots when lockfiles change, ensuring your builds stay deterministic and up-to-date with your dependencies.</p>
+            </div>
+            <div class="feature-card">
+                <h3><strong>Sync Command</strong></h3>
+                <p>Efficiently update dependencies without full reinstallation, saving time during development when only a few packages have changed.</p>
             </div>
             <div class="feature-card">
                 <h3><strong>Enterprise-Grade Security</strong></h3>
-                <p>Rigorous package validation against npm registry checksums and automatic vulnerability scanning.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Smart Dependency Tracking</strong></h3>
-                <p>Automatic snapshot invalidation when dependencies change, ensuring your builds stay deterministic.</p>
+                <p>Rigorous package validation against npm registry checksums and automatic vulnerability scanning through the plugin system.</p>
             </div>
         </div>
     </div>
@@ -522,6 +541,18 @@ flash-install clean-snapshot</code></pre>
         <p class="docs-link">
             Explore our comprehensive <a href="https://github.com/Nom-nom-hub/flash-install" class="repo-link">documentation and guides</a> to unlock the full potential of flash-install.
         </p>
+
+        <div style="margin-top: 20px;">
+            <h3>Core Features Documentation:</h3>
+            <ul>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/performance.md">Performance Optimizations</a></li>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/monorepo.md">Monorepo Support</a></li>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/offline-mode.md">Offline Mode</a></li>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/dependency-analysis.md">Dependency Analysis</a></li>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/cloud-cache.md">Cloud Cache</a></li>
+                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/enhanced-plugin-system.md">Enhanced Plugin System</a></li>
+            </ul>
+        </div>
 
         <div class="center" style="margin-top: 30px;">
             <a href="https://github.com/Nom-nom-hub/flash-install" class="button">Get Started</a>
@@ -535,6 +566,9 @@ flash-install clean-snapshot</code></pre>
         </div>
         <p>Copyright &copy; 2025 flash-install. Distributed under an MIT license.</p>
         <p>Made with <span class="glow">⚡</span> for the JavaScript community By Nom-nom-hub</p>
+        <p style="margin-top: 15px; font-size: 0.9em;">
+            Features: Enhanced Plugin System, Cloud Cache Integration, Monorepo Support, Dependency Analysis, and more!
+        </p>
     </div>
 
     <script>
