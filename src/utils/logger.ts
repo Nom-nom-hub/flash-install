@@ -52,6 +52,16 @@ export class Logger {
   }
 
   /**
+   * Enable or disable debug mode
+   */
+  setDebugMode(enabled: boolean): void {
+    if (enabled) {
+      this.config.level = LogLevel.DEBUG;
+      console.log(chalk.cyan('Debug mode enabled'));
+    }
+  }
+
+  /**
    * Format a log message with optional timestamp
    */
   private formatMessage(message: string): string {

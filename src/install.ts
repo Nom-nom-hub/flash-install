@@ -380,6 +380,9 @@ await cache.init();
 
       console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
 
+      // Initialize plugin manager with the correct project directory
+      await pluginManager.init(projectDir);
+
       // Detect package manager if not specified
       if (!this.options.packageManager) {
         this.options.packageManager = this.detectPackageManager(projectDir);
@@ -453,7 +456,9 @@ await cache.init();
       };
 
       // Run pre-install hooks
+      console.log('\n🔌 Running PRE_INSTALL hooks...');
       await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+      console.log('🔌 Finished running PRE_INSTALL hooks');
 
       // Check if we have a valid snapshot
       const snapshotCheckTimer = createTimer();
@@ -725,7 +730,9 @@ await cache.init();
       }
 
       // Run post-install hooks
+      console.log('\n🔌 Running POST_INSTALL hooks...');
       await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
+      console.log('🔌 Finished running POST_INSTALL hooks');
 
       // Log total time
       logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
@@ -1473,10 +1480,49 @@ await cache.init();
     packages: string[],
     options: PackageInstallOptions
   ): Promise<boolean> {
-    return installPackages(projectDir, packages, this.options.packageManager, {
-      ...options,
-      registry: this.options.registry
-    });
+    try {
+      // Start timer
+      const totalTimer = createTimer();
+
+      // Initialize plugin manager with the correct project directory
+      await pluginManager.init(projectDir);
+
+      // Create plugin context
+      const nodeModulesPath = path.join(projectDir, 'node_modules');
+      const pluginContext = {
+        projectDir,
+        nodeModulesPath,
+        dependencies: {},
+        packageManager: this.options.packageManager,
+        packages: packages
+      };
+
+      // Run pre-install hooks
+      console.log('\n🔌 Running PRE_INSTALL hooks...');
+      await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+      console.log('🔌 Finished running PRE_INSTALL hooks');
+
+      // Install packages
+      const success = await installPackages(projectDir, packages, this.options.packageManager, {
+        ...options,
+        registry: this.options.registry
+      });
+
+      if (success) {
+        // Run post-install hooks
+        console.log('\n🔌 Running POST_INSTALL hooks...');
+        await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
+        console.log('🔌 Finished running POST_INSTALL hooks');
+
+        // Log total time
+        logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
+      }
+
+      return success;
+    } catch (error) {
+      logger.error(`Failed to install packages: ${error}`);
+      return false;
+    }
   }
 
   /**

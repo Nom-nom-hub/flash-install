@@ -171,6 +171,7 @@ export class PluginManager {
    */
   async init(projectDir?: string): Promise<void> {
     if (this.initialized) {
+      logger.debug(`Plugin manager already initialized for ${this.projectDir}`);
       return;
     }
 
@@ -178,13 +179,17 @@ export class PluginManager {
       this.projectDir = projectDir;
     }
 
+    logger.debug(`Initializing plugin manager for project: ${this.projectDir}`);
+
     // Ensure global plugins directory exists
     await fs.ensureDir(this.globalPluginsDir);
+    logger.debug(`Global plugins directory: ${this.globalPluginsDir}`);
 
     // Load plugins from all sources
     await this.discoverAndLoadPlugins();
 
     this.initialized = true;
+    logger.debug(`Plugin manager initialized with ${this.plugins.length} plugins`);
   }
 
   /**
@@ -309,42 +314,71 @@ export class PluginManager {
     const discoveredPlugins: Array<{ plugin: Plugin; source: PluginSource; path: string }> = [];
 
     try {
-      // 1. Check for .flash-plugins directory
-      const localPluginsDir = path.join(this.projectDir, '.flash-plugins');
-      if (await fs.pathExists(localPluginsDir)) {
-        const entries = await fs.readdir(localPluginsDir);
+      // 1. Check for .flash-plugins directory in current project
+      await this.discoverPluginsFromDir(path.join(this.projectDir, '.flash-plugins'), discoveredPlugins);
 
-        for (const entry of entries) {
-          const pluginPath = path.join(localPluginsDir, entry);
-          const stats = await fs.stat(pluginPath);
+      // 2. Check for .flash-plugins directory in parent directory (for subprojects)
+      const parentDir = path.dirname(this.projectDir);
+      if (parentDir !== this.projectDir) { // Avoid infinite loop at root
+        await this.discoverPluginsFromDir(path.join(parentDir, '.flash-plugins'), discoveredPlugins);
+      }
+    } catch (error) {
+      logger.warn(`Failed to discover local plugins: ${error}`);
+    }
 
-          if (stats.isDirectory() || entry.endsWith('.js')) {
-            const pluginFile = stats.isDirectory()
-              ? path.join(pluginPath, 'index.js')
-              : pluginPath;
+    return discoveredPlugins;
+  }
 
-            if (await fs.pathExists(pluginFile)) {
-              try {
-                const plugin = await import(pluginFile);
+  /**
+   * Discover plugins from a directory
+   * @param localPluginsDir Directory to search for plugins
+   * @param discoveredPlugins Array to add discovered plugins to
+   */
+  private async discoverPluginsFromDir(
+    localPluginsDir: string,
+    discoveredPlugins: Array<{ plugin: Plugin; source: PluginSource; path: string }>
+  ): Promise<void> {
+    if (await fs.pathExists(localPluginsDir)) {
+      const entries = await fs.readdir(localPluginsDir);
 
-                if (this.isValidPlugin(plugin.default)) {
-                  discoveredPlugins.push({
-                    plugin: plugin.default,
-                    source: PluginSource.LOCAL,
-                    path: pluginPath
-                  });
-                } else {
-                  logger.warn(`Invalid local plugin: ${entry}`);
-                }
-              } catch (error) {
-                logger.warn(`Failed to load local plugin ${entry}: ${error}`);
+      for (const entry of entries) {
+        // Skip hidden files
+        if (entry.startsWith('.')) {
+          continue;
+        }
+
+        const pluginPath = path.join(localPluginsDir, entry);
+        const stats = await fs.stat(pluginPath);
+
+        if (stats.isDirectory() || entry.endsWith('.js')) {
+          const pluginFile = stats.isDirectory()
+            ? path.join(pluginPath, 'index.js')
+            : pluginPath;
+
+          if (await fs.pathExists(pluginFile)) {
+            try {
+              const plugin = await import(pluginFile);
+
+              if (this.isValidPlugin(plugin.default)) {
+                discoveredPlugins.push({
+                  plugin: plugin.default,
+                  source: PluginSource.LOCAL,
+                  path: pluginPath
+                });
+                logger.debug(`Discovered local plugin: ${plugin.default.name} at ${pluginPath}`);
+              } else {
+                logger.warn(`Invalid local plugin: ${entry}`);
               }
+            } catch (error) {
+              logger.warn(`Failed to load local plugin ${entry}: ${error}`);
             }
           }
         }
       }
+    }
 
-      // 2. Check for plugins in package.json
+    // 3. Check for plugins in package.json
+    try {
       const packageJsonPath = path.join(this.projectDir, 'package.json');
       if (await fs.pathExists(packageJsonPath)) {
         const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
@@ -365,6 +399,7 @@ export class PluginManager {
                     source: PluginSource.LOCAL,
                     path: resolvedPath
                   });
+                  logger.debug(`Discovered package.json plugin: ${plugin.default.name} at ${resolvedPath}`);
                 } else {
                   logger.warn(`Invalid package.json plugin: ${pluginPath}`);
                 }
@@ -378,10 +413,10 @@ export class PluginManager {
         }
       }
     } catch (error) {
-      logger.warn(`Failed to discover local plugins: ${error}`);
+      logger.warn(`Failed to discover plugins from package.json: ${error}`);
     }
 
-    return discoveredPlugins;
+
   }
 
   /**
@@ -563,19 +598,30 @@ export class PluginManager {
       await this.init();
     }
 
+    // Add debug logging
+    console.log(`\n🔍 Plugin Manager: Running hook '${hook}'`);
+    console.log(`🔍 Plugin Manager: Total plugins: ${this.plugins.length}`);
+
     // Filter out disabled plugins
     const enabledPlugins = this.plugins.filter(p => p.config?.enabled !== false);
+    console.log(`🔍 Plugin Manager: Enabled plugins: ${enabledPlugins.length}`);
 
     for (const plugin of enabledPlugins) {
+      console.log(`🔍 Plugin Manager: Checking plugin '${plugin.name}' for hook '${hook}'`);
       const hookFn = plugin.hooks[hook];
 
       if (hookFn) {
+        console.log(`🔍 Plugin Manager: Found hook '${hook}' in plugin '${plugin.name}'`);
         try {
           logger.debug(`Running ${hook} hook for ${plugin.name}`);
           await hookFn(context);
+          console.log(`🔍 Plugin Manager: Successfully ran hook '${hook}' for plugin '${plugin.name}'`);
         } catch (error) {
           logger.warn(`Plugin ${plugin.name} failed on ${hook} hook: ${error}`);
+          console.log(`🔍 Plugin Manager: Error running hook '${hook}' for plugin '${plugin.name}': ${error}`);
         }
+      } else {
+        console.log(`🔍 Plugin Manager: Hook '${hook}' not found in plugin '${plugin.name}'`);
       }
     }
   }

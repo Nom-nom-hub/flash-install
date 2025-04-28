@@ -52,7 +52,8 @@ const program = new Command();
 program
   .name('flash-install')
   .description('A fast, drop-in replacement for npm install with deterministic caching')
-  .version(version);
+  .version(version)
+  .option('--debug', 'Enable debug mode', false);
 
 // Default command (install)
 program
@@ -1241,3 +1242,9 @@ program
 
 // Parse command line arguments
 program.parse(process.argv);
+
+// Enable debug mode if --debug flag is set
+const options = program.opts();
+if (options.debug) {
+  logger.setDebugMode(true);
+}
