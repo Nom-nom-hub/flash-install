@@ -1,0 +1,11 @@
+{
+  "cloudCache": true,
+  "cloudProvider": "s3",
+  "syncPolicy": "upload-if-missing",
+  "concurrency": 10,
+  "vercelIntegration": {
+    "enabled": true,
+    "teamSharing": true,
+    "metrics": true
+  }
+}

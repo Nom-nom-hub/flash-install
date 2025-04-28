@@ -1,0 +1,16 @@
+{
+  "buildPlugins": [
+    {
+      "path": "./flash-install-vercel-plugin.js"
+    }
+  ],
+  "flash-install": {
+    "enabled": true,
+    "cloudCache": true,
+    "cloudProvider": "s3",
+    "teamSharing": true,
+    "fallbackToNpm": true,
+    "concurrency": 10,
+    "metrics": true
+  }
+}
