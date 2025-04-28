@@ -68,9 +68,8 @@ We offer multiple integration options:
 
 ## Contact
 
-- **Email**: [your-email@example.com]
-- **GitHub**: [https://github.com/Nom-nom-hub/flash-install]
-- **Website**: [Your website if available]
+- **Name**: Andrew Edouard
+- **GitHub**: https://github.com/Nom-nom-hub/flash-install
 
 ---
 

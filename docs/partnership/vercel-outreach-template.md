@@ -1,6 +1,6 @@
 # Vercel Partnership Outreach Template
 
-## Email Subject: 
+## Email Subject:
 Speeding up Next.js builds by 45% with flash-install
 
 ## Email Body:
@@ -31,7 +31,7 @@ Here's our GitHub repo: https://github.com/Nom-nom-hub/flash-install
 Would you have 15 minutes to chat next week? I'm available [provide 2-3 time slots].
 
 Best regards,
-[Your Name]
+Andrew Edouard
 
 ## Follow-up Email (if no response after 1 week):
 
@@ -48,4 +48,4 @@ I'd love to share this with you and discuss how we might bring these performance
 Would [suggest a specific date/time] work for a quick 15-minute chat?
 
 Best regards,
-[Your Name]
+Andrew Edouard
