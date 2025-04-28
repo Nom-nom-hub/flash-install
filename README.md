@@ -21,6 +21,8 @@
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
 
+[![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/flashinstall)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Speed-Up%20to%2030x%20Faster-orange" alt="Speed: Up to 30x Faster">
   <img src="https://img.shields.io/badge/Cache-Deterministic-blue" alt="Cache: Deterministic">
@@ -485,7 +487,7 @@ For more detailed documentation, see the [docs](docs) directory.
 
 flash-install is an open-source project that relies on community support. If you find this tool valuable for your work, please consider sponsoring its development.
 
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/Nom-nom-hub)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/Nom-nom-hub) [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/flashinstall)
 
 Your sponsorship helps us:
 - Maintain and improve flash-install

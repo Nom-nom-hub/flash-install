@@ -18,9 +18,16 @@ We're grateful to all the sponsors who support the development of flash-install!
 
 <!-- Individual sponsors will be listed here -->
 
+## Ko-fi Supporters
+
+<!-- Ko-fi supporters will be listed here -->
+
 ## How to Sponsor
 
-You can support the development of flash-install through [GitHub Sponsors](https://github.com/sponsors/Nom-nom-hub).
+You can support the development of flash-install through:
+
+- [GitHub Sponsors](https://github.com/sponsors/Nom-nom-hub) (coming soon)
+- [Ko-fi](https://ko-fi.com/flashinstall) (available now)
 
 Your sponsorship helps us:
 - Maintain and improve flash-install
