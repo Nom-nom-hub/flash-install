@@ -78,6 +78,7 @@ program
   .option('--network-retries <number>', 'Number of retries for network operations', '2')
   .option('--no-fallbacks', 'Disable fallbacks in offline mode')
   .option('--no-outdated-warnings', 'Disable warnings about outdated dependencies in offline mode')
+  .option('--no-interactive', 'Disable interactive mode (useful for CI environments)')
   .option('--cloud-cache', 'Enable cloud cache integration')
   .option('--cloud-provider <provider>', 'Cloud provider type (s3)', 's3')
   .option('--cloud-region <region>', 'Cloud provider region')
@@ -545,6 +546,13 @@ program
     `));
 
     console.log(chalk.cyan(`Starting interactive mode for ${chalk.bold(projectDir)}`));
+
+    // Check if interactive mode is disabled
+    const options = program.opts();
+    if (options.interactive === false) {
+      console.log(chalk.yellow('Interactive mode is disabled. Use --interactive to enable it.'));
+      process.exit(0);
+    }
 
     // Start the TUI
     startTui(projectDir);

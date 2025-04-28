@@ -50,6 +50,8 @@ export interface InstallOptions extends TypedInstallOptions {
   includeDevDependencies: boolean;
   skipPostinstall: boolean;
   registry?: string;
+  /** Whether to enable interactive mode */
+  interactive?: boolean;
   workspace?: {
     enabled: boolean;
     hoistDependencies: boolean;
@@ -83,6 +85,7 @@ const defaultOptions: InstallOptions = {
   packageManager: PackageManager.NPM,
   includeDevDependencies: true,
   skipPostinstall: false,
+  interactive: true,
   workspace: {
     enabled: false,
     hoistDependencies: true,
