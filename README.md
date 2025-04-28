@@ -11,7 +11,7 @@
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg" alt="Node.js Version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/v/@flash-install/cli" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/dm/@flash-install/cli" alt="npm downloads"></a>
-  <a href="https://bundlephobia.com/package/@flash-install/cli"><img src="https://img.shields.io/bundlephobia/min/@flash-install/cli" alt="npm bundle size"></a>
+  <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/badge/size-362%20kB-blue" alt="Package Size"></a>
   <a href="https://github.com/Nom-nom-hub/flash-install/graphs/commit-activity"><img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintenance"></a>
   <a href="https://github.com/Nom-nom-hub/flash-install/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
   <a href="https://github.com/Nom-nom-hub/flash-install/stargazers"><img src="https://img.shields.io/github/stars/Nom-nom-hub/flash-install" alt="GitHub stars"></a>
