@@ -118,7 +118,8 @@ runs:
           // If it fails with React error, fall back to npm
           if (error.message.includes('ReactCurrentOwner')) {
             console.log('Flash-install TUI error detected, falling back to npm...');
-            execSync(`npm ${{ inputs.command === 'install' ? 'install' : 'ci' }}`, {
+            const npmCommand = process.argv[2] === 'install' ? 'install' : 'ci';
+            execSync(`npm ${npmCommand}`, {
               stdio: 'inherit'
             });
           } else {
@@ -129,4 +130,4 @@ runs:
         EOF
 
         # Run the wrapper script
-        node run-flash-install.js
+        node run-flash-install.js "${{ inputs.command }}"
