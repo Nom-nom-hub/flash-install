@@ -106,7 +106,7 @@ runs:
         cd ${{ inputs.directory }}
 
         # Create a simple wrapper script to handle the React/Ink error
-        cat > run-flash-install.js << 'EOF'
+        cat > run-flash-install.cjs << 'EOF'
         const { execSync } = require('child_process');
 
         try {
@@ -130,4 +130,4 @@ runs:
         EOF
 
         # Run the wrapper script
-        node run-flash-install.js "${{ inputs.command }}"
+        node run-flash-install.cjs "${{ inputs.command }}"
