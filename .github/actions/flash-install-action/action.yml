@@ -105,29 +105,13 @@ runs:
 
         cd ${{ inputs.directory }}
 
-        # Create a simple wrapper script to handle the React/Ink error
-        cat > run-flash-install.cjs << 'EOF'
-        const { execSync } = require('child_process');
-
-        try {
-          // Try to run flash-install directly
-          execSync(`flash-install ${{ inputs.command }} ${FLASH_ARGS}`, {
-            stdio: 'inherit'
-          });
-        } catch (error) {
-          // If it fails with React error, fall back to npm
-          if (error.message.includes('ReactCurrentOwner')) {
-            console.log('Flash-install TUI error detected, falling back to npm...');
-            const npmCommand = process.argv[2] === 'install' ? 'install' : 'ci';
-            execSync(`npm ${npmCommand}`, {
-              stdio: 'inherit'
-            });
-          } else {
-            // Re-throw other errors
-            throw error;
-          }
-        }
-        EOF
-
-        # Run the wrapper script
-        node run-flash-install.cjs "${{ inputs.command }}"
+        # Run flash-install directly with fallback to npm if it fails
+        echo "Running flash-install ${{ inputs.command }} ${FLASH_ARGS}"
+        if ! flash-install ${{ inputs.command }} ${FLASH_ARGS}; then
+          echo "Flash-install failed, falling back to npm..."
+          if [ "${{ inputs.command }}" = "install" ]; then
+            npm install
+          else
+            npm ci
+          fi
+        fi
