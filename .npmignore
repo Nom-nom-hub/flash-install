@@ -149,3 +149,20 @@ desktop.ini
 .yarnrc
 .pnpmrc
 .nvmrc
+
+# Vercel specific files
+.vercel
+.next
+.turbo
+.vercel-build-output
+.vercel-cache
+.vercel-logs
+.vercelignore
+vercel.json
+flash-install-vercel-plugin.js
+
+# Partnership materials
+demos/vercel-partnership-report/
+demos/vercel-partnership-materials.zip
+demos/new-test-project/
+demos/test-project/

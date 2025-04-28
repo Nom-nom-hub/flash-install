@@ -6,3 +6,22 @@ dist
 .flashpack
 .flashpack-metadata.json
 test-flash-install
+
+# Vercel specific files
+.vercel
+.next
+.turbo
+.vercel-build-output
+.vercel-cache
+.vercel-logs
+.vercelignore
+vercel.json
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Partnership materials
+demos/vercel-partnership-report/
+demos/vercel-partnership-materials.zip
+demos/new-test-project/
