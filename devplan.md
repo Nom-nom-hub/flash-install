@@ -67,10 +67,10 @@ All high and medium priority features have been completed! 🎉
   - [x] Interactive snapshot management
   - [x] Visual dependency browser
 
-- [ ] **Integration with Package Managers**
-  - Deeper integration with npm, yarn, and pnpm
-  - Support for Bun package manager
-  - Custom registry support improvements
+- [x] **Integration with Package Managers**
+  - [x] Deeper integration with npm, yarn, and pnpm
+  - [x] Support for Bun package manager
+  - [x] Custom registry support improvements
 
 ### Low Priority Features
 
