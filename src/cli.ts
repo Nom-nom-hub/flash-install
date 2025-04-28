@@ -19,6 +19,7 @@ import { Spinner } from './utils/progress.js';
 import { cloudCache, SyncPolicy, CloudCacheConfig } from './cloud/cloud-cache.js';
 import { CloudProgress } from './utils/cloud-progress.js';
 import { workspaceManager } from './workspace.js';
+import { startTui } from './tui/index.js';
 
 /**
  * Get colored network status
@@ -514,6 +515,40 @@ program
     }
   });
 
+// Interactive mode command
+program
+  .command('interactive')
+  .alias('ui')
+  .description('Start interactive TUI mode')
+  .argument('[dir]', 'Project directory', '.')
+  .action(async (dir) => {
+    // Resolve project directory
+    const projectDir = path.resolve(dir);
+
+    // Check if directory exists
+    if (!await fsUtils.directoryExists(projectDir)) {
+      logger.error(`Directory not found: ${projectDir}`);
+      process.exit(1);
+    }
+
+    // Check if package.json exists
+    const packageJsonPath = path.join(projectDir, 'package.json');
+    if (!await fsUtils.fileExists(packageJsonPath)) {
+      logger.error(`package.json not found in ${projectDir}`);
+      process.exit(1);
+    }
+
+    // Start interactive mode
+    console.log(chalk.cyan(`
+⚡ flash-install v${version} - Interactive Mode
+    `));
+
+    console.log(chalk.cyan(`Starting interactive mode for ${chalk.bold(projectDir)}`));
+
+    // Start the TUI
+    startTui(projectDir);
+  });
+
 // Sync command
 program
   .command('sync')
@@ -842,7 +877,6 @@ cacheCommand
           }
         } else {
           // This is a package
-          const packagePath = cache.getPackagePath(entry.name, entry.version);
           packages.push([entry.name, entry.version]);
         }
       }
