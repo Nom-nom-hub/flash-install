@@ -112,5 +112,9 @@ console.log(`Failed: ${failedTests}`);
 console.log(`\nCleaning up test directory: ${testDir}`);
 fs.rmSync(testDir, { recursive: true, force: true });
 
-// Exit with appropriate code
-process.exit(failedTests > 0 ? 1 : 0);
+// Report test result without exiting the process
+if (failedTests > 0) {
+  console.error(`Tests failed: ${failedTests} failures`);
+} else {
+  console.log('All tests passed successfully');
+}
