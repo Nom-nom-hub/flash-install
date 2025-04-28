@@ -5,12 +5,36 @@
 <h1 align="center">⚡ flash-install</h1>
 <p align="center">Blazingly fast package installation for Node.js</p>
 
+[![CI](https://github.com/Nom-nom-hub/flash-install/actions/workflows/ci.yml/badge.svg)](https://github.com/Nom-nom-hub/flash-install/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg)](https://nodejs.org/)
-[![npm version](https://img.shields.io/badge/npm-v1.3.6-blue.svg)](https://www.npmjs.com/package/@flash-install/cli)
+[![npm version](https://img.shields.io/npm/v/@flash-install/cli)](https://www.npmjs.com/package/@flash-install/cli)
+[![npm downloads](https://img.shields.io/npm/dm/@flash-install/cli)](https://www.npmjs.com/package/@flash-install/cli)
+[![npm bundle size](https://img.shields.io/bundlephobia/min/@flash-install/cli)](https://bundlephobia.com/package/@flash-install/cli)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/Nom-nom-hub/flash-install/graphs/commit-activity)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Nom-nom-hub/flash-install/pulls)
+[![GitHub stars](https://img.shields.io/github/stars/Nom-nom-hub/flash-install)](https://github.com/Nom-nom-hub/flash-install/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/Nom-nom-hub/flash-install)](https://github.com/Nom-nom-hub/flash-install/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Nom-nom-hub/flash-install)](https://github.com/Nom-nom-hub/flash-install/commits/main)
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/⚡%20Speed-Up%20to%2030x%20Faster-orange" alt="Speed: Up to 30x Faster">
+  <img src="https://img.shields.io/badge/🔄%20Cache-Deterministic-blue" alt="Cache: Deterministic">
+  <img src="https://img.shields.io/badge/📦%20Snapshots-Instant%20Restore-green" alt="Snapshots: Instant Restore">
+  <img src="https://img.shields.io/badge/🔌%20Plugins-Extensible-purple" alt="Plugins: Extensible">
+  <img src="https://img.shields.io/badge/☁️%20Cloud-Team%20Sharing-lightblue" alt="Cloud: Team Sharing">
+  <img src="https://img.shields.io/badge/🔍%20Analysis-Dependency%20Insights-yellow" alt="Analysis: Dependency Insights">
+</p>
+
+<p align="center">
+  <b>Compatible with:</b><br>
+  <img src="https://img.shields.io/badge/npm-Compatible-red?logo=npm" alt="npm Compatible">
+  <img src="https://img.shields.io/badge/yarn-Compatible-blue?logo=yarn" alt="yarn Compatible">
+  <img src="https://img.shields.io/badge/pnpm-Compatible-orange?logo=pnpm" alt="pnpm Compatible">
+  <img src="https://img.shields.io/badge/Monorepos-Supported-green" alt="Monorepos Supported">
+</p>
 
 ## Features
 
