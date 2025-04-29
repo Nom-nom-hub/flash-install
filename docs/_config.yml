@@ -1,10 +1,10 @@
-title: flash-install
+title: Flash Install
 description: Blazingly fast package installation for Node.js
 baseurl: "/flash-install"
-url: "https://nom-nom-hub.github.io"
+url: "https://flash-install-cli.github.io"
 logo: /assets/logo.png
-github_username: Nom-nom-hub
-repository: Nom-nom-hub/flash-install
+github_username: flash-install-cli
+repository: flash-install-cli/flash-install
 
 # Theme settings
 remote_theme: pmarsceill/just-the-docs
@@ -15,8 +15,8 @@ search_enabled: true
 
 # Aux links for the upper right navigation
 aux_links:
-  "flash-install on GitHub":
-    - "//github.com/Nom-nom-hub/flash-install"
+  "Flash Install on GitHub":
+    - "//github.com/flash-install-cli/flash-install"
 
 # Makes Aux links open in a new tab
 aux_links_new_tab: true
@@ -26,13 +26,13 @@ back_to_top: true
 back_to_top_text: "Back to top"
 
 # Footer content
-footer_content: "Copyright &copy; 2023 flash-install. Distributed under an <a href=\"https://github.com/Nom-nom-hub/flash-install/blob/main/LICENSE\">MIT license.</a>"
+footer_content: "Copyright &copy; 2023-2024 Flash Install. Distributed under an <a href=\"https://github.com/flash-install-cli/flash-install/blob/main/LICENSE\">MIT license.</a>"
 
 # Heading anchor links
 heading_anchors: true
 
 # Google Analytics
-ga_tracking: 
+ga_tracking:
 ga_tracking_anonymize_ip: true
 
 # Exclude from processing

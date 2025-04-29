@@ -1,0 +1,142 @@
+---
+layout: default
+---
+
+<div class="vercel-integration">
+  <nav class="vercel-nav">
+    <a href="{{ site.baseurl }}/vercel/" {% if page.url == "/vercel/" %}class="active"{% endif %}>Overview</a>
+    <a href="{{ site.baseurl }}/vercel/guide" {% if page.url == "/vercel/guide" %}class="active"{% endif %}>Integration Guide</a>
+    <a href="https://vercel.com/integrations/flash-install" target="_blank">Add to Vercel</a>
+    <a href="https://github.com/flash-install-cli/flash-install" target="_blank">GitHub</a>
+  </nav>
+  
+  <div class="vercel-content">
+    {{ content }}
+  </div>
+  
+  <footer class="vercel-footer">
+    <p>Flash Install is an open-source project dedicated to making JavaScript dependency management faster and more reliable.</p>
+    <p>&copy; 2023-2024 Flash Install. Distributed under an <a href="https://github.com/flash-install-cli/flash-install/blob/main/LICENSE">MIT license.</a></p>
+  </footer>
+</div>
+
+<style>
+  .vercel-integration {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: #fff;
+    background-color: #000;
+  }
+  
+  .vercel-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+  }
+  
+  .vercel-nav a {
+    color: #ccc;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 0;
+    transition: color 0.2s ease;
+  }
+  
+  .vercel-nav a:hover, .vercel-nav a.active {
+    color: #ffcc00;
+    border-bottom: 2px solid #ffcc00;
+  }
+  
+  .vercel-content {
+    min-height: 70vh;
+  }
+  
+  .vercel-content h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .vercel-content h2 {
+    color: #ffcc00;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+    margin-top: 2.5rem;
+  }
+  
+  .vercel-content h3 {
+    color: #0070f3;
+    margin-top: 1.5rem;
+  }
+  
+  .vercel-content a {
+    color: #ffcc00;
+    text-decoration: none;
+  }
+  
+  .vercel-content a:hover {
+    text-decoration: underline;
+  }
+  
+  .vercel-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+  }
+  
+  .vercel-content table th, .vercel-content table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #333;
+  }
+  
+  .vercel-content table th {
+    background-color: #111;
+    color: #ffcc00;
+  }
+  
+  .vercel-content table tr:nth-child(even) {
+    background-color: #111;
+  }
+  
+  .vercel-content pre {
+    background-color: #111;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+  }
+  
+  .vercel-content code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+  }
+  
+  .vercel-content pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+  
+  .vercel-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid #333;
+    text-align: center;
+    color: #888;
+  }
+  
+  @media (max-width: 768px) {
+    .vercel-nav {
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .vercel-integration {
+      padding: 1rem;
+    }
+  }
+</style>
