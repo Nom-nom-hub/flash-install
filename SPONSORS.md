@@ -26,7 +26,7 @@ We're grateful to all the sponsors who support the development of flash-install!
 
 You can support the development of flash-install through:
 
-- [GitHub Sponsors](https://github.com/sponsors/Nom-nom-hub) (coming soon)
+- [GitHub Sponsors](https://github.com/sponsors/flash-install-cli) (coming soon)
 - [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6S31E7BC7) (available now)
 
 Your sponsorship helps us:

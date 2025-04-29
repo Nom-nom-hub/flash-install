@@ -1,22 +1,22 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Nom-nom-hub/flash-install/main/assets/logo.png" alt="flash-install logo" width="200" height="200">
+  <img src="https://raw.githubusercontent.com/flash-install-cli/flash-install/main/assets/logo.png" alt="flash-install logo" width="200" height="200">
 </p>
 
 <h1 align="center">⚡ flash-install</h1>
 <p align="center">Blazingly fast package installation for Node.js</p>
 
 <p align="center">
-  <a href="https://github.com/Nom-nom-hub/flash-install/actions/workflows/ci.yml"><img src="https://github.com/Nom-nom-hub/flash-install/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/actions/workflows/ci.yml"><img src="https://github.com/flash-install-cli/flash-install/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg" alt="Node.js Version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/v/@flash-install/cli" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/dm/@flash-install/cli" alt="npm downloads"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/badge/size-362%20kB-blue" alt="Package Size"></a>
-  <a href="https://github.com/Nom-nom-hub/flash-install/graphs/commit-activity"><img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintenance"></a>
-  <a href="https://github.com/Nom-nom-hub/flash-install/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
-  <a href="https://github.com/Nom-nom-hub/flash-install/stargazers"><img src="https://img.shields.io/github/stars/Nom-nom-hub/flash-install" alt="GitHub stars"></a>
-  <a href="https://github.com/Nom-nom-hub/flash-install/issues"><img src="https://img.shields.io/github/issues/Nom-nom-hub/flash-install" alt="GitHub issues"></a>
-  <a href="https://github.com/Nom-nom-hub/flash-install/commits/main"><img src="https://img.shields.io/github/last-commit/Nom-nom-hub/flash-install" alt="GitHub last commit"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/graphs/commit-activity"><img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintenance"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/stargazers"><img src="https://img.shields.io/github/stars/flash-install-cli/flash-install" alt="GitHub stars"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/issues"><img src="https://img.shields.io/github/issues/flash-install-cli/flash-install" alt="GitHub issues"></a>
+  <a href="https://github.com/flash-install-cli/flash-install/commits/main"><img src="https://img.shields.io/github/last-commit/flash-install-cli/flash-install" alt="GitHub last commit"></a>
 </p>
 
 A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
@@ -442,11 +442,11 @@ Plugins can be used for tasks like:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the repository at https://github.com/Nom-nom-hub/flash-install
+1. Fork the repository at https://github.com/flash-install-cli/flash-install
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request at https://github.com/Nom-nom-hub/flash-install/pulls
+5. Open a Pull Request at https://github.com/flash-install-cli/flash-install/pulls
 
 
 
@@ -487,7 +487,7 @@ For more detailed documentation, see the [docs](docs) directory.
 
 flash-install is an open-source project that relies on community support. If you find this tool valuable for your work, please consider sponsoring its development.
 
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/Nom-nom-hub)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa)](https://github.com/sponsors/flash-install-cli)
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6S31E7BC7)
 
 Your sponsorship helps us:

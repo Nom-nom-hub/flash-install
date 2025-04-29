@@ -42,11 +42,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Nom-nom-hub/flash-install.git"
+    "url": "https://github.com/flash-install-cli/flash-install.git"
   },
-  "homepage": "https://github.com/Nom-nom-hub/flash-install",
+  "homepage": "https://github.com/flash-install-cli/flash-install",
   "bugs": {
-    "url": "https://github.com/Nom-nom-hub/flash-install/issues"
+    "url": "https://github.com/flash-install-cli/flash-install/issues"
   },
   "publishConfig": {
     "access": "public"

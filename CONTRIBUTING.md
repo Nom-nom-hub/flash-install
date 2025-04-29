@@ -10,7 +10,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Reporting Bugs
 
-If you find a bug, please create an issue on our [GitHub issues page](https://github.com/Nom-nom-hub/flash-install/issues) with:
+If you find a bug, please create an issue on our [GitHub issues page](https://github.com/flash-install-cli/flash-install/issues) with:
 
 1. A clear title and description
 2. Steps to reproduce the issue
