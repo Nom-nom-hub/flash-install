@@ -22,7 +22,7 @@
 - Simplified and organized options for better clarity
 - Added more examples of common usage patterns
 
-## Version 1.8.1 (2025-04-30)
+## Version 1.8.1 (2025-04-25)
 
 ### Breaking Changes
 - Changed the `flash-install` command to use the direct CLI implementation for better reliability and performance
