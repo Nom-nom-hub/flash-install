@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.8.2 (2024-07-10)
+
+### Enhancements
+- Made `flash-install` command without arguments run the install command by default
+- Improved user experience by allowing both `flash-install` and `flash-install install` to work the same way
+
 ## Version 1.8.1 (2024-07-10)
 
 ### Breaking Changes

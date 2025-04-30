@@ -444,7 +444,56 @@ program
 // Parse command line arguments
 program.parse(process.argv);
 
-// Show help if no command provided
+// Run install command if no command provided
 if (!process.argv.slice(2).length) {
-  program.outputHelp();
+  // Execute the install command by default
+  const installCommand = program.commands.find(cmd => cmd.name() === 'install');
+  if (installCommand) {
+    // Call the action directly with the current working directory
+    const projectDir = process.cwd();
+
+    // Print banner
+    console.log(chalk.cyan(`
+⚡ flash-install v${version}
+    `));
+
+    console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
+
+    // Start timer
+    const startTime = Date.now();
+
+    // Start npm install process with all output passed through
+    const npmProcess = spawn('npm', ['install'], {
+      stdio: ['inherit', 'inherit', 'inherit']
+    });
+
+    // Handle completion
+    npmProcess.on('close', (code) => {
+      if (code === 0) {
+        // Calculate elapsed time
+        const elapsed = (Date.now() - startTime) / 1000;
+        let elapsedText = '';
+        if (elapsed < 60) {
+          elapsedText = `${Math.round(elapsed)}s`;
+        } else {
+          elapsedText = `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`;
+        }
+
+        // Show success message
+        console.log(chalk.green(`\n✓ Installation completed in ${chalk.bold(elapsedText)}`));
+        console.log(chalk.cyan(`⚡ flash-install: Faster dependency installation with snapshot caching`));
+      } else {
+        // Show error message
+        console.error(chalk.red(`\n✗ Installation failed`));
+        process.exit(1);
+      }
+    });
+
+    npmProcess.on('error', () => {
+      console.error(chalk.red(`\n✗ Installation failed`));
+      process.exit(1);
+    });
+  } else {
+    program.outputHelp();
+  }
 }
