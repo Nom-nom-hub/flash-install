@@ -6,6 +6,12 @@
 - Made `flash-install` command without arguments run the install command by default
 - Improved user experience by allowing both `flash-install` and `flash-install install` to work the same way
 
+### Documentation
+- Completely restructured README for better readability
+- Moved command usage to the top of the README
+- Simplified and organized options for better clarity
+- Added more examples of common usage patterns
+
 ## Version 1.8.1 (2024-07-10)
 
 ### Breaking Changes
