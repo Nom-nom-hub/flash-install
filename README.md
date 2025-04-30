@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Speed-Up%20to%2050%%20Faster-orange" alt="Speed: Up to 50% Faster">
+  <img src="https://img.shields.io/badge/Speed-Up%20to%2050%25%20Faster-orange" alt="Speed: Up to 50% Faster">
   <img src="https://img.shields.io/badge/Cache-Deterministic-blue" alt="Cache: Deterministic">
   <img src="https://img.shields.io/badge/Cloud-Team%20Sharing-lightblue" alt="Cloud: Team Sharing">
   <img src="https://img.shields.io/badge/CI/CD-Optimized-green" alt="CI/CD: Optimized">
@@ -31,9 +31,7 @@ npm install -g @flash-install/cli
 ### Basic Usage
 
 ```bash
-# Install dependencies (both commands work the same)
-flash-install
-# or
+# Install dependencies
 flash-install install
 
 # Create a snapshot for faster future installs

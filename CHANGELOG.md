@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.8.4 (2024-07-10)
+
+### Bug Fixes
+- Fixed display issue with the 50% badge in README
+
 ## Version 1.8.3 (2024-07-10)
 
 ### Bug Fixes
