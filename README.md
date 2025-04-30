@@ -333,25 +333,26 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 
 
-## Direct CLI Interface
+## CLI Interface
 
-flash-install provides two CLI interfaces:
-
-1. **Main CLI Interface** (`flash-install`): The primary interface with all core commands and features.
-2. **Direct CLI Interface** (`flash-install-direct`): A simplified interface with direct implementations of commands.
-
-The direct CLI interface can be accessed by running:
+The `flash-install` command uses a direct CLI implementation for better reliability and performance. When you run `flash-install`, you're using the direct CLI interface which provides all the core functionality you need.
 
 ```bash
-node dist/cli-direct.js <command>
+# Basic usage
+flash-install install
+
+# Create a snapshot
+flash-install snapshot
+
+# Restore from a snapshot
+flash-install restore
 ```
 
-This interface is useful for:
-- Debugging issues with the main CLI
-- Running commands with minimal overhead
-- Accessing experimental features not yet available in the main CLI
-
-> **Note:** Some commands may behave slightly differently between the two interfaces. The main CLI interface is recommended for most users.
+This implementation:
+- Provides reliable progress reporting
+- Has minimal overhead
+- Works consistently across different environments
+- Avoids compatibility issues with terminal UI libraries
 
 ## Documentation
 

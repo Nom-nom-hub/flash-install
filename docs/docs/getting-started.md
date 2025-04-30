@@ -26,19 +26,9 @@ npm install -g @flash-install/cli
 
 This will make the `flash-install`, `flash-direct`, and `flash-install-direct` commands available globally on your system.
 
-## CLI Interfaces
+## CLI Interface
 
-flash-install provides two CLI interfaces:
-
-1. **Main CLI Interface** (`flash-install`): The primary interface with all core commands and features.
-2. **Direct CLI Interface** (`flash-direct` or `flash-install-direct`): A simplified interface with direct implementations of commands.
-
-The direct CLI interface is useful for:
-- Debugging issues with the main CLI
-- Running commands with minimal overhead
-- Accessing experimental features not yet available in the main CLI
-
-> **Note:** Some commands may behave slightly differently between the two interfaces. The main CLI interface is recommended for most users.
+The `flash-install` command provides a reliable and efficient interface for all your dependency management needs. It uses a direct implementation that avoids compatibility issues with terminal UI libraries.
 
 ## Basic Usage
 
@@ -48,10 +38,10 @@ Replace your regular `npm install` command with `flash-install`:
 
 ```bash
 # Standard installation
-flash-install
+flash-install install
 
-# Or use direct mode for better progress reporting
-flash-direct
+# Or simply
+flash-install
 ```
 
 flash-install will automatically detect your package manager (npm, yarn, or pnpm) based on the lock files in your project.

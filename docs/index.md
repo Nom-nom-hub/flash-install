@@ -105,10 +105,10 @@ Replace your regular `npm install` command with `flash-install`:
 
 ```bash
 # Standard installation
-flash-install
+flash-install install
 
-# Or use direct mode for better progress reporting
-flash-direct
+# Or simply
+flash-install
 ```
 
 [Get Started with flash-install]({{ site.baseurl }}/docs/getting-started){: .btn }

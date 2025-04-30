@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Make the CLI file executable
-const cliPath = path.join(__dirname, '..', 'dist', 'cli.js');
+const cliPath = path.join(__dirname, '..', 'dist', 'cli-direct.js');
 
 try {
   // Check if the file exists
