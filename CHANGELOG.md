@@ -1,16 +1,16 @@
 # Changelog
 
-## Version 1.8.4 (2024-07-10)
+## Version 1.8.4 (2025-04-30)
 
 ### Bug Fixes
 - Fixed display issue with the 50% badge in README
 
-## Version 1.8.3 (2024-07-10)
+## Version 1.8.3 (2025-04-30)
 
 ### Bug Fixes
 - Fixed issue with default command not running install
 
-## Version 1.8.2 (2024-07-10)
+## Version 1.8.2 (2025-04-30)
 
 ### Enhancements
 - Made `flash-install` command without arguments run the install command by default
@@ -22,7 +22,7 @@
 - Simplified and organized options for better clarity
 - Added more examples of common usage patterns
 
-## Version 1.8.1 (2024-07-10)
+## Version 1.8.1 (2025-04-30)
 
 ### Breaking Changes
 - Changed the `flash-install` command to use the direct CLI implementation for better reliability and performance
