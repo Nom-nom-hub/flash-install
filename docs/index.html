@@ -8,32 +8,35 @@
     <meta name="author" content="flash-install">
     <link rel="icon" href="assets/favicon.ico">
     <title>flash-install - Blazingly Fast Package Installation</title>
+    <link rel="stylesheet" href="assets/css/modern.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Additional custom styles */
         :root {
             --primary-color: #ffcc00; /* Yellow from logo */
             --secondary-color: #4caf50; /* Green from logo */
-            --accent-color: #ffffff; /* White */
-            --background-color: #121212; /* Dark background */
-            --card-background: #1e1e1e; /* Slightly lighter dark */
-            --text-color: #e0e0e0; /* Light text */
-            --text-light: #aaaaaa; /* Lighter text */
-            --border-color: #333333; /* Dark borders */
-            --header-gradient-start: #ffcc00; /* Yellow */
-            --header-gradient-end: #4caf50; /* Green */
+            --accent-color: #0078ff; /* Blue accent */
+
+            /* Dark mode colors */
+            --dark-bg: #121212;
+            --dark-bg-alt: #1e1e1e;
+            --dark-text: #e0e0e0;
+            --dark-text-secondary: #aaaaaa;
+            --dark-border: #333333;
+
+            /* Current theme colors (defaults to dark) */
+            --bg-color: var(--dark-bg);
+            --bg-alt-color: var(--dark-bg-alt);
+            --text-color: var(--dark-text);
+            --text-secondary-color: var(--dark-text-secondary);
+            --border-color: var(--dark-border);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-color);
-            background-color: var(--background-color);
             background-image:
                 radial-gradient(circle at 25px 25px, rgba(255, 204, 0, 0.15) 2px, transparent 0),
                 radial-gradient(circle at 75px 75px, rgba(76, 175, 80, 0.15) 2px, transparent 0);
             background-size: 100px 100px;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
         }
         .header {
             text-align: center;
@@ -362,67 +365,217 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--secondary-color);
         }
+        /* Additional styles for specific elements */
+        .code-comment {
+            color: #6A9955;
+        }
+
+        .speedup {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .speedup::after {
+            content: '⚡';
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+
+        .glow {
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">
-            <img src="assets/logo.png" alt="flash-install logo">
+    <header class="site-header">
+        <div class="container">
+            <nav class="main-nav">
+                <div class="logo">
+                    <a href="./">
+                        <img src="assets/logo.png" alt="flash-install logo" width="40" height="40">
+                        <span>flash-install</span>
+                    </a>
+                </div>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="./docs/getting-started">Documentation</a></li>
+                    <li><a href="https://github.com/flash-install-cli/flash-install">GitHub</a></li>
+                    <li><a href="https://www.npmjs.com/package/@flash-install/cli">npm</a></li>
+                    <li><a href="./blog/">Blog</a></li>
+                </ul>
+            </nav>
         </div>
+    </header>
 
-        <h1 class="glow">⚡ flash-install</h1>
-        <p class="tagline">Blazingly fast package installation for Node.js</p>
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">⚡ flash-install</h1>
+                <p class="hero-subtitle">Blazingly fast package installation for Node.js</p>
+                <div class="hero-buttons">
+                    <a href="./docs/getting-started" class="btn btn-primary">Get Started</a>
+                    <a href="https://github.com/flash-install-cli/flash-install" class="btn btn-secondary">GitHub</a>
+                </div>
+                <div class="hero-badges">
+                    <img src="https://img.shields.io/npm/v/@flash-install/cli" alt="npm version">
+                    <img src="https://img.shields.io/npm/dm/@flash-install/cli" alt="npm downloads">
+                    <img src="https://img.shields.io/badge/Speed-Up%20to%2050%25%20Faster-orange" alt="Speed: Up to 50% Faster">
+                    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="assets/logo.png" alt="flash-install logo" class="pulse-animation">
+            </div>
+        </div>
+    </section>
 
-        <div>
-            <a href="https://github.com/Nom-nom-hub/flash-install" class="button">GitHub</a>
-            <a href="https://www.npmjs.com/package/@flash-install/cli" class="button secondary">npm</a>
+    <section class="quick-start">
+        <div class="container">
+            <h2>Quick Start</h2>
+            <div class="terminal">
+                <div class="terminal-header">
+                    <span class="terminal-button"></span>
+                    <span class="terminal-button"></span>
+                    <span class="terminal-button"></span>
+                    <span class="terminal-title">Terminal</span>
+                </div>
+                <div class="terminal-body">
+                    <p><span class="prompt">$</span> npm install -g @flash-install/cli</p>
+                    <p><span class="prompt">$</span> flash-install</p>
+                    <p class="comment"># That's it! flash-install will handle the rest.</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="section">
-        <h2 class="section-title">What is flash-install?</h2>
-        <p>flash-install is a fast, drop-in replacement for <code>npm install</code>, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and <code>.flashpack</code> archive snapshotting.</p>
-    </div>
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose flash-install?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Blazing Fast</h3>
+                    <p>30-50% faster than standard npm install through deterministic caching and parallel operations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-box-archive"></i>
+                    </div>
+                    <h3>Snapshot Support</h3>
+                    <p>Creates and restores .flashpack archives for instant dependency restoration.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <h3>Parallel Operations</h3>
+                    <p>Installs packages in parallel using Node.js worker threads for maximum efficiency.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-wifi-slash"></i>
+                    </div>
+                    <h3>Offline Mode</h3>
+                    <p>Install dependencies without internet connection using cache or snapshots.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Checksum Validation</h3>
+                    <p>Verifies package integrity against npm registry checksums for security.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <h3>Plugin System</h3>
+                    <p>Extensible architecture with lifecycle hooks for customization.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <h3>Cloud Cache Integration</h3>
+                    <p>Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-network"></i>
+                    </div>
+                    <h3>Dependency Analysis</h3>
+                    <p>Visualization of dependency graphs, detection of duplicates, and size analysis.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <div class="features">
-        <div class="feature">
-            <h3>⚡ Blazing Fast</h3>
-            <p>Installs dependencies from cache when available, avoiding network requests and reducing installation time by up to 30x</p>
+    <section class="commands">
+        <div class="container">
+            <h2>Command Reference</h2>
+            <div class="commands-table-wrapper">
+                <table class="commands-table">
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>flash-install</code></td>
+                            <td>Install dependencies (default)</td>
+                        </tr>
+                        <tr>
+                            <td><code>flash-install install</code></td>
+                            <td>Install dependencies</td>
+                        </tr>
+                        <tr>
+                            <td><code>flash-install snapshot</code></td>
+                            <td>Create a snapshot of node_modules</td>
+                        </tr>
+                        <tr>
+                            <td><code>flash-install restore</code></td>
+                            <td>Restore node_modules from a snapshot</td>
+                        </tr>
+                        <tr>
+                            <td><code>flash-install clean</code></td>
+                            <td>Remove node_modules and snapshot</td>
+                        </tr>
+                        <tr>
+                            <td><code>flash-install sync</code></td>
+                            <td>Synchronize dependencies with lockfile</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="feature">
-            <h3>📦 Snapshot Support</h3>
-            <p>Creates and restores <code>.flashpack</code> archives for instant dependency restoration, perfect for CI/CD environments</p>
-        </div>
-        <div class="feature">
-            <h3>🔄 Parallel Operations</h3>
-            <p>Installs packages in parallel using Node.js worker threads, maximizing your system's capabilities</p>
-        </div>
-        <div class="feature">
-            <h3>🔒 Enhanced Offline Mode</h3>
-            <p>Install dependencies without internet connection with intelligent network detection and fallback strategies</p>
-        </div>
-        <div class="feature">
-            <h3>✅ Checksum Validation</h3>
-            <p>Verifies package integrity against npm registry checksums, ensuring security and reliability</p>
-        </div>
-        <div class="feature">
-            <h3>🔌 Enhanced Plugin System</h3>
-            <p>Extensible architecture with lifecycle hooks, auto-discovery, and plugin registry for custom workflows and integrations</p>
-        </div>
-        <div class="feature">
-            <h3>☁️ Cloud Cache Integration</h3>
-            <p>Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities</p>
-        </div>
-        <div class="feature">
-            <h3>📊 Dependency Analysis</h3>
-            <p>Visualization of dependency graphs, detection of duplicates, and size analysis</p>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2 class="section-title">Installation</h2>
-        <pre><code>npm install -g @flash-install/cli</code></pre>
-    </div>
+    </section>
 
     <div class="section">
         <h2 class="section-title">Basic Usage</h2>
@@ -459,156 +612,173 @@ flash-install plugin add <path>
 flash-install plugin install <name></code></pre>
     </div>
 
-    <div class="section">
-        <h2 class="section-title">Performance Comparison</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Scenario</th>
-                    <th>npm install</th>
-                    <th>flash-install</th>
-                    <th>Speedup</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>First install (small project)</td>
-                    <td>30-60s</td>
-                    <td>10-15s</td>
-                    <td class="speedup">3-4x</td>
-                </tr>
-                <tr>
-                    <td>First install (large project)</td>
-                    <td>3-5min</td>
-                    <td>1-2min</td>
-                    <td class="speedup">2-3x</td>
-                </tr>
-                <tr>
-                    <td>Subsequent install (from cache)</td>
-                    <td>30-60s</td>
-                    <td>5-10s</td>
-                    <td class="speedup">6-10x</td>
-                </tr>
-                <tr>
-                    <td>Subsequent install (from snapshot)</td>
-                    <td>30-60s</td>
-                    <td>1-3s</td>
-                    <td class="speedup">20-30x</td>
-                </tr>
-                <tr>
-                    <td>CI/CD environment</td>
-                    <td>1-3min</td>
-                    <td>5-15s</td>
-                    <td class="speedup">10-20x</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="section">
-        <h2 class="section-title">Advanced Features</h2>
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3><strong>Enhanced Plugin System</strong></h3>
-                <p>Powerful plugin system with lifecycle hooks, auto-discovery, and an official plugin registry. Create custom plugins to extend functionality, manage them with commands, and share them via npm.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Cloud Cache Integration</strong></h3>
-                <p>Share caches across machines and teams using S3, Azure, or GCP storage. Configure sync policies, team permissions, and automatic invalidation based on lockfile changes.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Monorepo Support</strong></h3>
-                <p>Enhanced workspace detection, parallel installation across workspaces, and intelligent dependency hoisting for better monorepo performance.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Dependency Analysis</strong></h3>
-                <p>Visualize dependency graphs, detect duplicates, analyze package sizes, and generate reports in various formats to understand your project dependencies.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Snapshot Fingerprinting</strong></h3>
-                <p>Auto-invalidates snapshots when lockfiles change, ensuring your builds stay deterministic and up-to-date with your dependencies.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Sync Command</strong></h3>
-                <p>Efficiently update dependencies without full reinstallation, saving time during development when only a few packages have changed.</p>
-            </div>
-            <div class="feature-card">
-                <h3><strong>Enterprise-Grade Security</strong></h3>
-                <p>Rigorous package validation against npm registry checksums and automatic vulnerability scanning through the plugin system.</p>
+    <section class="performance">
+        <div class="container">
+            <h2>Performance Comparison</h2>
+            <div class="performance-table-wrapper">
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>npm install</th>
+                            <th>flash-install</th>
+                            <th>Speedup</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>First install (small project)</td>
+                            <td>30-60s</td>
+                            <td>10-15s</td>
+                            <td><span class="speedup">3-4x</span></td>
+                        </tr>
+                        <tr>
+                            <td>First install (large project)</td>
+                            <td>3-5min</td>
+                            <td>1-2min</td>
+                            <td><span class="speedup">2-3x</span></td>
+                        </tr>
+                        <tr>
+                            <td>Subsequent install (from cache)</td>
+                            <td>30-60s</td>
+                            <td>5-10s</td>
+                            <td><span class="speedup">6-10x</span></td>
+                        </tr>
+                        <tr>
+                            <td>Subsequent install (from snapshot)</td>
+                            <td>30-60s</td>
+                            <td>1-3s</td>
+                            <td><span class="speedup">20-30x</span></td>
+                        </tr>
+                        <tr>
+                            <td>CI/CD environment</td>
+                            <td>1-3min</td>
+                            <td>5-15s</td>
+                            <td><span class="speedup">10-20x</span></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="section">
-        <h2 class="section-title">Documentation</h2>
-        <p class="docs-link">
-            Explore our comprehensive <a href="https://github.com/Nom-nom-hub/flash-install" class="repo-link">documentation and guides</a> to unlock the full potential of flash-install.
-        </p>
-
-        <div style="margin-top: 20px;">
-            <h3>Core Features Documentation:</h3>
-            <ul>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/performance.md">Performance Optimizations</a></li>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/monorepo.md">Monorepo Support</a></li>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/offline-mode.md">Offline Mode</a></li>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/dependency-analysis.md">Dependency Analysis</a></li>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/cloud-cache.md">Cloud Cache</a></li>
-                <li><a href="https://github.com/Nom-nom-hub/flash-install/blob/main/docs/enhanced-plugin-system.md">Enhanced Plugin System</a></li>
-            </ul>
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Speed Up Your Workflow?</h2>
+            <p>Start using flash-install today and experience faster dependency installation.</p>
+            <div class="cta-buttons">
+                <a href="./docs/getting-started" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/flash-install-cli/flash-install" class="btn btn-secondary">View on GitHub</a>
+            </div>
         </div>
+    </section>
 
-        <div class="center" style="margin-top: 30px;">
-            <a href="https://github.com/Nom-nom-hub/flash-install" class="button">Get Started</a>
-            <a href="https://www.npmjs.com/package/@flash-install/cli" class="button secondary">View on npm</a>
+    <section class="documentation">
+        <div class="container">
+            <h2>Documentation</h2>
+            <div class="docs-grid">
+                <div class="docs-card">
+                    <h3>Performance Optimizations</h3>
+                    <p>Learn how flash-install achieves its impressive speed improvements.</p>
+                    <a href="./performance.md" class="docs-link">Read more →</a>
+                </div>
+                <div class="docs-card">
+                    <h3>Monorepo Support</h3>
+                    <p>Efficiently manage dependencies across multiple packages in a monorepo.</p>
+                    <a href="./monorepo.md" class="docs-link">Read more →</a>
+                </div>
+                <div class="docs-card">
+                    <h3>Offline Mode</h3>
+                    <p>Work without an internet connection using cache and snapshots.</p>
+                    <a href="./offline-mode.md" class="docs-link">Read more →</a>
+                </div>
+                <div class="docs-card">
+                    <h3>Cloud Cache</h3>
+                    <p>Share caches across your team using cloud storage providers.</p>
+                    <a href="./cloud-cache.md" class="docs-link">Read more →</a>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="footer">
-        <div class="logo" style="margin-bottom: 20px;">
-            <img src="assets/logo.png" alt="flash-install logo" style="max-width: 80px;">
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <div class="footer-logo">
+                        <img src="assets/logo.png" alt="flash-install logo" width="40" height="40">
+                        <span>flash-install</span>
+                    </div>
+                    <p>Blazingly fast package installation for Node.js</p>
+                </div>
+                <div class="footer-column">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="./docs/getting-started">Getting Started</a></li>
+                        <li><a href="./performance.md">Performance</a></li>
+                        <li><a href="./monorepo.md">Monorepo Support</a></li>
+                        <li><a href="./cloud-cache.md">Cloud Cache</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/flash-install-cli/flash-install">GitHub</a></li>
+                        <li><a href="https://www.npmjs.com/package/@flash-install/cli">npm</a></li>
+                        <li><a href="https://github.com/flash-install-cli/flash-install/issues">Issues</a></li>
+                        <li><a href="https://github.com/flash-install-cli/flash-install/discussions">Discussions</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="./blog/">Blog</a></li>
+                        <li><a href="./docs/github-actions">GitHub Actions</a></li>
+                        <li><a href="./docs/configuration">Configuration</a></li>
+                        <li><a href="./docs/plugins">Plugins</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Copyright © 2025 flash-install. Distributed under an <a href="https://github.com/flash-install-cli/flash-install/blob/main/LICENSE">MIT license</a>.</p>
+            </div>
         </div>
-        <p>Copyright &copy; 2025 flash-install. Distributed under an MIT license.</p>
-        <p>Made with <span class="glow">⚡</span> for the JavaScript community By Nom-nom-hub</p>
-        <p style="margin-top: 15px; font-size: 0.9em;">
-            Features: Enhanced Plugin System, Cloud Cache Integration, Monorepo Support, Dependency Analysis, and more!
-        </p>
-    </div>
+    </footer>
 
     <script>
-        // Add animations and effects
-        document.addEventListener('DOMContentLoaded', function() {
-            // Logo pulse animation
-            const logo = document.querySelector('.header .logo img');
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-toggle').addEventListener('click', function() {
+            document.querySelector('.nav-links').classList.toggle('active');
+            this.classList.toggle('active');
+        });
 
-            setInterval(() => {
-                logo.style.transform = 'scale(1.05)';
-                setTimeout(() => {
-                    logo.style.transform = 'scale(1)';
-                }, 500);
-            }, 3000);
-
-            // Add fade-in animation to features
-            const features = document.querySelectorAll('.feature');
-            features.forEach((feature, index) => {
-                feature.style.opacity = '0';
-                feature.style.transform = 'translateY(20px)';
-                feature.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-
-                setTimeout(() => {
-                    feature.style.opacity = '1';
-                    feature.style.transform = 'translateY(0)';
-                }, 300 + (index * 100));
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
             });
+        });
 
-            // Add glow effect to speedup numbers on hover
-            const speedups = document.querySelectorAll('.speedup');
-            speedups.forEach(speedup => {
-                speedup.addEventListener('mouseover', () => {
-                    speedup.classList.add('glow');
-                });
-                speedup.addEventListener('mouseout', () => {
-                    speedup.classList.remove('glow');
-                });
+        // Add active class to nav links based on current page
+        const currentLocation = window.location.pathname;
+        const navLinks = document.querySelectorAll('.nav-links a');
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === currentLocation) {
+                link.classList.add('active');
+            }
+        });
+
+        // Add glow effect to speedup numbers on hover
+        const speedups = document.querySelectorAll('.speedup');
+        speedups.forEach(speedup => {
+            speedup.addEventListener('mouseover', () => {
+                speedup.classList.add('glow');
+            });
+            speedup.addEventListener('mouseout', () => {
+                speedup.classList.remove('glow');
             });
         });
     </script>
