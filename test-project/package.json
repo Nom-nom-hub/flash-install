@@ -1,1 +1,25 @@
-{"name":"test-project","dependencies":{"express":"^4.18.2","lodash":"^4.17.21","chalk":"^5.2.0"}}
+{
+  "name": "flash-install-vercel-demo",
+  "version": "1.0.0",
+  "description": "Demo project for flash-install Vercel integration",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "flash-install",
+    "vercel",
+    "demo"
+  ],
+  "author": "Andrew Edouard",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

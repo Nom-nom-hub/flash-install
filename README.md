@@ -2,34 +2,23 @@
   <img src="https://raw.githubusercontent.com/flash-install-cli/flash-install/main/assets/logo.png" alt="flash-install logo" width="200" height="200">
 </p>
 
-<h1 align="center">⚡ flash-install</h1>
-<p align="center">Blazingly fast package installation for Node.js</p>
+<h1 align="center">⚡ Flash Install GitHub Action</h1>
+<p align="center">Speed up your CI/CD pipeline with Flash Install, a fast npm alternative with deterministic caching</p>
 
 <p align="center">
-  <a href="https://github.com/flash-install-cli/flash-install/actions/workflows/ci.yml"><img src="https://github.com/flash-install-cli/flash-install/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/marketplace/actions/flash-install"><img src="https://img.shields.io/badge/GitHub%20Actions-Flash%20Install-yellow" alt="GitHub Actions"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D%2016.0.0-brightgreen.svg" alt="Node.js Version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/v/@flash-install/cli" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/npm/dm/@flash-install/cli" alt="npm downloads"></a>
-  <a href="https://www.npmjs.com/package/@flash-install/cli"><img src="https://img.shields.io/badge/size-362%20kB-blue" alt="Package Size"></a>
   <a href="https://github.com/flash-install-cli/flash-install/graphs/commit-activity"><img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintenance"></a>
-  <a href="https://github.com/flash-install-cli/flash-install/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
-  <a href="https://github.com/flash-install-cli/flash-install/stargazers"><img src="https://img.shields.io/github/stars/flash-install-cli/flash-install" alt="GitHub stars"></a>
-  <a href="https://github.com/flash-install-cli/flash-install/issues"><img src="https://img.shields.io/github/issues/flash-install-cli/flash-install" alt="GitHub issues"></a>
-  <a href="https://github.com/flash-install-cli/flash-install/commits/main"><img src="https://img.shields.io/github/last-commit/flash-install-cli/flash-install" alt="GitHub last commit"></a>
 </p>
 
-A fast, drop-in replacement for `npm install`, focused on drastically speeding up Node.js dependency installation through deterministic caching, parallel operations, and `.flashpack` archive snapshotting.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6S31E7BC7)
-
 <p align="center">
-  <img src="https://img.shields.io/badge/Speed-Up%20to%2030x%20Faster-orange" alt="Speed: Up to 30x Faster">
+  <img src="https://img.shields.io/badge/Speed-Up%20to%2050%%20Faster-orange" alt="Speed: Up to 50% Faster">
   <img src="https://img.shields.io/badge/Cache-Deterministic-blue" alt="Cache: Deterministic">
-  <img src="https://img.shields.io/badge/Snapshots-Instant%20Restore-green" alt="Snapshots: Instant Restore">
-  <img src="https://img.shields.io/badge/Plugins-Extensible-purple" alt="Plugins: Extensible">
   <img src="https://img.shields.io/badge/Cloud-Team%20Sharing-lightblue" alt="Cloud: Team Sharing">
-  <img src="https://img.shields.io/badge/Analysis-Dependency%20Insights-yellow" alt="Analysis: Dependency Insights">
+  <img src="https://img.shields.io/badge/CI/CD-Optimized-green" alt="CI/CD: Optimized">
 </p>
 
 <p align="center">
@@ -37,251 +26,145 @@ A fast, drop-in replacement for `npm install`, focused on drastically speeding u
   <img src="https://img.shields.io/badge/npm-Compatible-red" alt="npm Compatible">
   <img src="https://img.shields.io/badge/yarn-Compatible-blue" alt="yarn Compatible">
   <img src="https://img.shields.io/badge/pnpm-Compatible-orange" alt="pnpm Compatible">
+  <img src="https://img.shields.io/badge/bun-Compatible-purple" alt="bun Compatible">
   <img src="https://img.shields.io/badge/Monorepos-Supported-green" alt="Monorepos Supported">
 </p>
 
 ## Features
 
-- **Blazing Fast**: Installs dependencies from cache when available, avoiding network requests
-- **Deterministic Caching**: Uses hash-based paths for deduplication and hardlinks to minimize disk usage
-- **Parallel Operations**: Installs packages in parallel using Node.js worker threads
-- **Snapshot Support**: Creates and restores `.flashpack` archives for instant dependency restoration
-- **Package Manager Compatibility**: Works with npm, yarn, and pnpm projects
-- **Monorepo Support**: Enhanced workspace detection, parallel installation across workspaces, and intelligent dependency hoisting
-- **Enhanced Offline Mode**: Install dependencies without internet connection with intelligent network detection and fallback strategies
-- **Checksum Validation**: Verifies package integrity against npm registry checksums
-- **Snapshot Fingerprinting**: Auto-invalidates snapshots when lockfiles change
-- **Sync Command**: Efficiently updates dependencies without full reinstallation
-- **Enhanced Plugin System**: Extensible architecture with lifecycle hooks, auto-discovery, and plugin registry
-- **Cloud Cache Integration**: Store and retrieve caches from cloud storage (S3, Azure, GCP) with team sharing capabilities
-- **Dependency Analysis**: Visualization of dependency graphs, detection of duplicates, and size analysis
-
-## Installation
-
-```bash
-npm install -g @flash-install/cli
-```
+- ⚡ **30-50% faster** than standard npm install
+- 🔄 **Deterministic caching** for consistent builds
+- ☁️ **Cloud caching** support for team sharing
+- 🔌 **Multiple package managers** support (npm, yarn, pnpm, bun)
+- 🛠️ **Optimized for CI/CD** environments
+- 📦 **GitHub Actions caching** integration
+- 🏗️ **Monorepo support** with workspace detection
+- 🔍 **Fallback to npm** if Flash Install encounters an error
 
 ## Usage
 
-### Basic Installation
+Add Flash Install to your GitHub Actions workflow:
 
-Replace your regular `npm install` command with `flash-install`:
+```yaml
+steps:
+  - uses: actions/checkout@v3
 
-```bash
-# Standard installation
-flash-install
-
-# Or use direct mode for better progress reporting
-flash-direct
+  - name: Install dependencies with Flash Install
+    uses: flash-install-cli/flash-install-action@v1
+    with:
+      # Optional parameters (shown with defaults)
+      command: 'install'           # Command to run (install, restore, snapshot, clean)
+      directory: '.'               # Directory to run the command in
+      cache-enabled: 'true'        # Enable GitHub Actions caching
+      cloud-cache: 'false'         # Enable cloud caching
+      cloud-provider: 's3'         # Cloud provider (s3, azure, gcp)
+      cloud-bucket: ''             # Cloud bucket name
+      cloud-region: ''             # Cloud region
+      cloud-prefix: 'flash-install-cache' # Cloud prefix
+      package-manager: 'npm'       # Package manager to use (npm, yarn, pnpm, bun)
+      concurrency: '4'             # Number of concurrent downloads
 ```
 
-### Installing Specific Packages
+## Examples
 
-Install individual packages just like with npm:
+### Basic Usage
 
-```bash
-# Install packages
-flash-install express react
-
-# Install with specific version
-flash-install lodash@4.17.21
-
-# Save to dependencies (default)
-flash-install axios --save
-
-# Save to devDependencies
-flash-install jest --save-dev
-
-# Save exact version
-flash-install typescript@5.0.4 --save-exact
+```yaml
+- name: Install dependencies
+  uses: flash-install-cli/flash-install-action@v1
 ```
 
-### Creating a Snapshot
+### With Cloud Caching (AWS S3)
 
-Create a `.flashpack` snapshot of your `node_modules` directory:
-
-```bash
-flash-install snapshot
-
-# Skip adding to global cache
-flash-install snapshot --no-cache
-
-# Set a custom timeout for the cache operation (in seconds)
-flash-install snapshot --cache-timeout 10
+```yaml
+- name: Install dependencies with S3 caching
+  uses: flash-install-cli/flash-install-action@v1
+  with:
+    cloud-cache: 'true'
+    cloud-provider: 's3'
+    cloud-bucket: 'my-ci-cache-bucket'
+    cloud-region: 'us-east-1'
+  env:
+    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
-### Restoring from a Snapshot
+### Using Yarn
 
-Restore your `node_modules` from a `.flashpack` snapshot:
-
-```bash
-flash-install restore
+```yaml
+- name: Install dependencies with Yarn
+  uses: flash-install-cli/flash-install-action@v1
+  with:
+    package-manager: 'yarn'
 ```
 
-### Cleaning
+### Using PNPM
 
-#### Clean Everything
-
-Remove both `node_modules` and local `.flashpack` file:
-
-```bash
-flash-install clean
+```yaml
+- name: Install dependencies with PNPM
+  uses: flash-install-cli/flash-install-action@v1
+  with:
+    package-manager: 'pnpm'
 ```
 
-**Note:** The clean command removes both the node_modules directory and the snapshot file. You'll need to create a new snapshot after cleaning if you want to use the restore command later.
+### Using Bun
 
-#### Clean Only Node Modules
-
-Remove only the `node_modules` directory (preserves snapshot):
-
-```bash
-flash-install clean-modules
+```yaml
+- name: Install dependencies with Bun
+  uses: flash-install-cli/flash-install-action@v1
+  with:
+    package-manager: 'bun'
 ```
 
-This is useful when you want to free up disk space but keep the snapshot for quick restoration later.
+## Complete Workflow Example
 
-#### Clean Only Snapshot
+Here's a complete workflow example using Flash Install:
 
-Remove only the snapshot file (preserves node_modules):
+```yaml
+name: Build and Test
 
-```bash
-flash-install clean-snapshot
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies with Flash Install
+      uses: flash-install-cli/flash-install-action@v1
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build
+      run: npm run build
 ```
 
-This is useful when you want to create a fresh snapshot without removing your installed dependencies.
+## Input Parameters
 
-Clean the global cache:
-
-```bash
-flash-install clean --global
-```
-
-> **Note:** The `clean-modules` and `clean-snapshot` commands are now available in both the main CLI interface and the direct CLI interface. Previously, they were only available in the direct CLI interface.
-
-### Sync Dependencies
-
-Efficiently update dependencies without a full reinstall:
-
-```bash
-flash-install sync
-```
-
-### Cache Information
-
-View information about the global cache:
-
-```bash
-flash-install cache
-```
-
-Verify cache integrity:
-
-```bash
-flash-install cache --verify
-```
-
-Optimize cache storage:
-
-```bash
-flash-install cache --optimize
-```
-
-### Cloud Cache
-
-Synchronize your cache with cloud storage:
-
-```bash
-# Sync with default settings (both upload and download)
-flash-install cloud-sync --cloud-bucket=your-bucket-name
-
-# Upload only
-flash-install cloud-sync --direction=upload --cloud-bucket=your-bucket-name
-
-# Download only
-flash-install cloud-sync --direction=download --cloud-bucket=your-bucket-name
-
-# Force synchronization even if files exist
-flash-install cloud-sync --force --cloud-bucket=your-bucket-name
-
-# Use a specific cloud provider
-flash-install cloud-sync --cloud-provider=azure --cloud-bucket=your-container-name
-
-# Team sharing with access controls
-flash-install cloud-sync --team-id=your-team --team-token=your-token --team-access-level=write
-```
-
-See the [cloud cache documentation](docs/cloud-cache.md) for more details.
-
-### Dependency Analysis
-
-Flash Install provides tools for analyzing and visualizing dependencies:
-
-```bash
-# Analyze dependencies and show statistics
-flash-install analyze
-
-# Visualize dependency tree
-flash-install deps
-
-# Generate a DOT graph for Graphviz
-flash-install deps --format dot --output deps.dot
-
-# Generate a Markdown report
-flash-install deps --format markdown --output deps.md
-```
-
-See the [dependency analysis documentation](docs/docs/dependency-analysis.md) for more details.
-
-### Network Status
-
-Check network availability and registry status:
-
-```bash
-# Check network status
-flash-install network
-```
-
-### Monorepo Support
-
-Flash Install provides robust support for monorepos and workspaces:
-
-```bash
-# Install dependencies with workspace support
-flash-install -w
-
-# List all workspace packages
-flash-install workspaces
-
-# Install with custom workspace options
-flash-install -w --no-hoist --workspace-concurrency 8
-```
-
-See the [monorepo documentation](docs/docs/monorepo.md) for more details.
-
-### Plugin Management
-
-List installed plugins:
-
-```bash
-flash-install plugin list
-```
-
-Add a plugin:
-
-```bash
-flash-install plugin add <path-to-plugin>
-```
-
-Remove a plugin:
-
-```bash
-flash-install plugin remove <plugin-name>
-```
-
-## Options
-
-### Installation Options
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `command` | Command to run (install, restore, snapshot, clean) | No | `install` |
+| `directory` | Directory to run the command in | No | `.` |
+| `cache-enabled` | Enable GitHub Actions caching | No | `true` |
+| `cloud-cache` | Enable cloud caching | No | `false` |
+| `cloud-provider` | Cloud provider (s3, azure, gcp) | No | `s3` |
+| `cloud-bucket` | Cloud bucket name | No | `''` |
+| `cloud-region` | Cloud region | No | `''` |
+| `cloud-prefix` | Cloud prefix | No | `flash-install-cache` |
+| `package-manager` | Package manager to use (npm, yarn, pnpm, bun) | No | `npm` |
+| `concurrency` | Number of concurrent downloads | No | `4` |
 
 - `-o, --offline`: Use offline mode (requires cache or snapshot)
 - `--no-cache`: Disable cache usage

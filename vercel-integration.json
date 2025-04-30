@@ -1,0 +1,65 @@
+{
+  "name": "Flash Install",
+  "slug": "flash-install",
+  "description": "Accelerate Vercel builds by up to 50%",
+  "longDescription": "Flash Install dramatically speeds up dependency installation through deterministic caching and parallel operations. Reduce Vercel build times by 30-50%, with even greater improvements for large projects and monorepos.",
+  "category": "Developer Tools",
+  "tags": ["dependencies", "performance", "build-tools", "caching", "npm"],
+  "redirectUrl": "https://flash-install-vercel-870sz9g3m-flash-install.vercel.app",
+  "webhookUrl": "https://flash-install-vercel-870sz9g3m-flash-install.vercel.app/api/webhooks",
+  "configurationUrl": "https://flash-install-vercel-870sz9g3m-flash-install.vercel.app/configuration",
+  "eulaUrl": "https://flash-install-cli.github.io/flash-install/legal/eula/",
+  "privacyPolicyUrl": "https://flash-install-cli.github.io/flash-install/legal/privacy-policy/",
+  "supportUrl": "https://github.com/flash-install-cli/flash-install/issues",
+  "scopes": [
+    {
+      "name": "integration-configuration",
+      "permission": "read-write"
+    },
+    {
+      "name": "deployments",
+      "permission": "read-write"
+    },
+    {
+      "name": "projects",
+      "permission": "read"
+    },
+    {
+      "name": "teams",
+      "permission": "read"
+    }
+  ],
+  "webhookEvents": [
+    "deployment.created",
+    "deployment.error",
+    "deployment.succeeded",
+    "integration-resource.project-connected",
+    "integration-resource.project-disconnected"
+  ],
+  "configuration": [
+    {
+      "name": "enableCache",
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Flash Install's deterministic caching"
+    },
+    {
+      "name": "cacheCompression",
+      "type": "boolean",
+      "default": true,
+      "description": "Enable compression for cached packages"
+    },
+    {
+      "name": "concurrency",
+      "type": "number",
+      "default": 4,
+      "description": "Number of concurrent package installations (1-16)"
+    },
+    {
+      "name": "fallbackToNpm",
+      "type": "boolean",
+      "default": true,
+      "description": "Fall back to npm if Flash Install encounters an error"
+    }
+  ]
+}

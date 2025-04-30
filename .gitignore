@@ -3,8 +3,6 @@ dist
 .DS_Store
 ._*
 *.log
-.flashpack
-.flashpack-metadata.json
 test-flash-install
 
 # Vercel specific files
