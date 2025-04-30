@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.8.3 (2024-07-10)
+
+### Bug Fixes
+- Fixed issue with default command not running install
+
 ## Version 1.8.2 (2024-07-10)
 
 ### Enhancements
