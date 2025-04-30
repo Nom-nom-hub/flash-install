@@ -1,6 +1,14 @@
+---
+layout: default
+title: Speed Up Your CI/CD Pipeline by 50% with flash-install
+nav_order: 1
+description: "Learn how to dramatically reduce your CI/CD pipeline times by using flash-install's caching and snapshot features"
+permalink: /blog/speed-up-ci-with-flash-install
+---
+
 # Speed Up Your CI/CD Pipeline by 50% with flash-install
 
-*Published on [Date]*
+*Published on April 30, 2025*
 
 CI/CD pipelines are essential for modern development workflows, but they can be painfully slow. One of the biggest bottlenecks? Installing dependencies. Today, we're excited to announce the **Flash Install GitHub Action**, designed to dramatically speed up your CI/CD pipelines.
 
@@ -39,9 +47,9 @@ Adding flash-install to your GitHub workflow is simple:
 ```yaml
 steps:
   - uses: actions/checkout@v3
-  
+
   - name: Install dependencies with flash-install
-    uses: Nom-nom-hub/flash-install/.github/actions/flash-install-action@main
+    uses: flash-install-cli/flash-install/.github/actions/flash-install-action@main
 ```
 
 That's it! No complex configuration needed.
@@ -54,7 +62,7 @@ For teams working on the same codebase, cloud caching can provide even more sign
 
 ```yaml
 - name: Install dependencies with S3 caching
-  uses: Nom-nom-hub/flash-install/.github/actions/flash-install-action@main
+  uses: flash-install-cli/flash-install/.github/actions/flash-install-action@main
   with:
     cloud-cache: 'true'
     cloud-provider: 's3'
@@ -71,7 +79,7 @@ Working with a yarn or pnpm project? No problem:
 
 ```yaml
 - name: Install dependencies with Yarn
-  uses: Nom-nom-hub/flash-install/.github/actions/flash-install-action@main
+  uses: flash-install-cli/flash-install/.github/actions/flash-install-action@main
   with:
     package-manager: 'yarn'
 ```
@@ -97,8 +105,8 @@ For teams running hundreds of CI jobs per day, the time savings translate direct
 
 Ready to speed up your CI/CD pipeline? Add the flash-install GitHub Action to your workflow today:
 
-1. Visit our [GitHub repository](https://github.com/Nom-nom-hub/flash-install)
-2. Check out the [documentation](https://github.com/Nom-nom-hub/flash-install/tree/main/.github/actions/flash-install-action)
+1. Visit our [GitHub repository](https://github.com/flash-install-cli/flash-install)
+2. Check out the [documentation](https://github.com/flash-install-cli/flash-install/tree/main/.github/actions/flash-install-action)
 3. Star the repo if you find it useful!
 
 We'd love to hear your feedback and experiences using flash-install in your CI/CD pipelines. Drop us a comment below or open an issue on GitHub.
