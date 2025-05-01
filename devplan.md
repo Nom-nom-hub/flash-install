@@ -2,95 +2,86 @@
 
 This document outlines the planned features and improvements for upcoming releases of flash-install.
 
-## Current Release (v1.4.x)
+## Current Release (v1.8.x)
 
-All high and medium priority features have been completed! 🎉
+The current release (v1.8.4) has addressed critical issues and improved user experience:
+- Fixed critical error when running `flash-install` after downloading
+- Made `flash-install` command without arguments run the install command by default
+- Improved documentation and README structure
+- Fixed display issues with badges
 
-## Next Release (v1.5.x)
-
-### High Priority Features
-
-- [x] **Improved Monorepo Support**
-  - Enhanced workspace detection
-  - Parallel installation across workspaces
-  - Intelligent dependency hoisting
-
-- [x] **Performance Optimizations**
-  - Reduce memory usage during large installations
-  - Optimize cache storage format
-  - Implement streaming extraction for faster snapshot restoration
-
-- [x] **Enhanced Offline Mode**
-  - Better detection of network availability
-  - Fallback strategies for partial offline scenarios
-  - Warning system for outdated dependencies when working offline
-
-### Medium Priority Features
-
-- [x] **Dependency Analysis Tools**
-  - Visualization of dependency graph
-  - Detection of duplicate dependencies
-  - Size analysis and reporting
-  - Multiple output formats (tree, DOT, Markdown)
-  - Customizable visualization options
-
-- [x] **Cloud Cache Integration**
-  - [x] Support for storing/retrieving cache from S3-compatible storage
-  - [x] Team-shared caching for improved CI/CD performance
-  - [x] Configurable cache synchronization policies
-
-- [x] **Enhanced Cloud Cache Features**
-  - [x] Implement the NEWEST sync policy
-  - [x] Add support for additional cloud providers (Azure, GCP)
-  - [x] Add cache invalidation based on lockfile changes
-  - [x] Implement a sync command for manual cache synchronization
-  - [x] Add team permissions and access controls
+## Next Release (v1.9.x)
 
 ### High Priority Features
 
-- [x] **Enhanced Plugin System**
-  - Additional lifecycle hooks
-  - Plugin discovery and auto-loading
-  - Official plugin registry
+- [ ] **Documentation Site Improvements**
+  - Fix broken blog section URL (https://flash-install-cli.github.io/flash-install/blog/)
+  - Improve mobile responsiveness of documentation site
+  - Add comprehensive API documentation
+  - Create more tutorials and guides for common use cases
 
-- [x] **Stability and Performance Improvements**
-  - [x] Reduced memory usage with adaptive batch processing and intelligent garbage collection
-  - [x] Optimized cloud cache operations with chunked transfers and retry mechanisms
-  - [x] Improved error handling with comprehensive categorization and recovery strategies
-  - [x] Enhanced progress reporting for better user feedback
-  - [x] Implemented fallback mechanisms for resilient operations
+- [ ] **Error Handling and Diagnostics**
+  - Implement detailed error diagnostics system
+  - Add self-healing capabilities for common failure scenarios
+  - Improve error messages with actionable solutions
+  - Create troubleshooting wizard for complex issues
+
+- [ ] **CI/CD Integration Enhancements**
+  - Optimize for GitHub Actions, CircleCI, and Jenkins
+  - Add specialized CI mode with optimized caching strategies
+  - Implement build time analytics and reporting
+  - Create CI-specific configuration presets
 
 ### Medium Priority Features
 
-- [x] **Interactive CLI Mode**
-  - [x] TUI (Text User Interface) for managing dependencies
-  - [x] Interactive snapshot management
-  - [x] Visual dependency browser
+- [ ] **Additional Cloud Providers**
+  - Add support for DigitalOcean Spaces
+  - Add support for Cloudflare R2
+  - Implement multi-region support for existing providers
+  - Create cloud provider migration tools
 
-- [x] **Integration with Package Managers**
-  - [x] Deeper integration with npm, yarn, and pnpm
-  - [x] Support for Bun package manager
-  - [x] Custom registry support improvements
+- [ ] **Performance Profiling**
+  - Add detailed performance metrics collection
+  - Create visualization for installation bottlenecks
+  - Implement automatic performance optimization suggestions
+  - Add benchmarking command for comparing against other package managers
+
+- [ ] **Enhanced Security Features**
+  - Implement dependency vulnerability scanning
+  - Add license compliance checking
+  - Create security policy enforcement options
+  - Integrate with security advisory databases
 
 ### Low Priority Features
 
-- [ ] **Additional Cloud Providers**
-  - Support for more cloud storage providers
-  - Enhanced cloud provider configuration options
-  - Multi-region support
+- [ ] **Language Support Beyond JavaScript**
+  - Add experimental support for Python (pip/poetry)
+  - Add experimental support for Ruby (bundler)
+  - Create unified cache strategy across language ecosystems
+  - Implement cross-language dependency analysis
 
-## Future Considerations
-
-- **Language Support Beyond JavaScript**
-  - Experimental support for other package ecosystems (Python, Ruby, etc.)
+## Future Considerations (v2.0+)
 
 - **Enterprise Features**
   - Advanced compliance reporting for dependencies
   - Private registry integration improvements
   - Enterprise-grade security features
+  - Team collaboration tools
+
+- **Desktop GUI Application**
+  - Cross-platform desktop application
+  - Visual dependency management
+  - Project templates and scaffolding
+  - Integration with IDEs and code editors
+
+- **Cloud Service**
+  - Hosted cache service
+  - Team collaboration features
+  - Analytics and insights dashboard
+  - CI/CD integration as a service
 
 ## Contributing
 
 We welcome community contributions to help implement these features! Please check our [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute.
 
-If you'd like to suggest additional features or prioritize existing ones, please open an issue on our [GitHub repository](https://github.com/Nom-nom-hub/flash-install/issues).
+If you'd like to suggest additional features or prioritize existing ones, please open an issue on our [GitHub repository](https://github.com/flash-install-cli/flash-install/issues).
