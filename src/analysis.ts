@@ -22,6 +22,8 @@ export interface AnalysisOptions {
   showDuplicates?: boolean;
   /** Show dependency sizes */
   showSizes?: boolean;
+  /** Perform lightweight analysis for speed */
+  lightweightAnalysis?: boolean;
 }
 
 /**
@@ -32,7 +34,8 @@ const defaultOptions: AnalysisOptions = {
   maxDepth: undefined,
   directOnly: false,
   showDuplicates: true,
-  showSizes: true
+  showSizes: true,
+  lightweightAnalysis: false // Default to full analysis
 };
 
 /**
@@ -96,30 +99,58 @@ export class DependencyAnalyzer {
    */
   async analyze(projectDir: string): Promise<AnalysisResult> {
     try {
-      // Resolve project directory
       const resolvedDir = path.resolve(projectDir);
-      
-      // Check if directory exists
+      const packageJsonPath = path.join(resolvedDir, 'package.json');
+
       if (!await fsUtils.directoryExists(resolvedDir)) {
         throw new Error(`Directory not found: ${resolvedDir}`);
       }
-      
-      // Check if package.json exists
-      const packageJsonPath = path.join(resolvedDir, 'package.json');
       if (!await fsUtils.fileExists(packageJsonPath)) {
         throw new Error(`package.json not found in ${resolvedDir}`);
       }
-      
-      // Parse package.json
+
       const pkg = await installer.parsePackageJson(resolvedDir);
-      
-      // Detect package manager
       const packageManager = installer.detectPackageManager(resolvedDir);
-      
-      // Parse lockfile
       const dependencies = await installer.parseLockfile(resolvedDir, packageManager);
-      
-      // Build dependency tree
+
+      // Check for lightweight analysis
+      if (this.options.lightweightAnalysis && Object.keys(pkg.dependencies || {}).length < 5) { // Threshold for small projects
+        logger.debug('Performing lightweight dependency analysis.');
+        const lightweightTree: Record<string, DependencyInfo> = {};
+        let totalSize = 0;
+        
+        const directDeps = { ...pkg.dependencies };
+        if (this.options.includeDevDependencies && pkg.devDependencies) {
+          Object.assign(directDeps, pkg.devDependencies);
+        }
+
+        for (const [name, version] of Object.entries(directDeps)) {
+          const depPath = path.join(resolvedDir, 'node_modules', name);
+          const depInfo: DependencyInfo = {
+            name,
+            version: dependencies[name] || String(version),
+            depth: 0
+          };
+
+          if (this.options.showSizes && await fsUtils.directoryExists(depPath)) {
+            depInfo.size = await fsUtils.getSize(depPath);
+            totalSize += depInfo.size;
+          }
+          lightweightTree[name] = depInfo;
+        }
+
+        return {
+          dependencies: lightweightTree,
+          totalSize,
+          dependencyCount: Object.keys(lightweightTree).length,
+          uniquePackages: Object.keys(lightweightTree).length,
+          duplicatePackages: 0, // Not calculated in lightweight mode
+          largestDependencies: [], // Not calculated in lightweight mode
+          mostDuplicated: [] // Not calculated in lightweight mode
+        };
+      }
+
+      // Existing full analysis logic
       const dependencyTree = await this.buildDependencyTree(
         resolvedDir,
         dependencies,
@@ -127,7 +158,6 @@ export class DependencyAnalyzer {
         packageManager
       );
       
-      // Calculate statistics
       const stats = this.calculateStatistics(dependencyTree);
       
       return {

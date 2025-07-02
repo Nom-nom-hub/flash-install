@@ -25,6 +25,7 @@ import { NetworkStatus, networkManager } from './utils/network.js';
 import { fallbackManager, FallbackResult } from './utils/fallback.js';
 import { CloudCacheConfig } from './cloud/cloud-cache.js';
 import { ErrorHandler, FlashError, ErrorCategory, RecoveryStrategy } from './utils/error-handler.js';
+import { dependencyAnalyzer, AnalysisResult } from './analysis.js'; // Import dependencyAnalyzer
 // Import version from package.json
 const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const version = packageJson.version;
@@ -73,6 +74,8 @@ export interface InstallOptions extends TypedInstallOptions {
   };
   /** Cloud cache configuration */
   cloud?: CloudCacheConfig;
+  /** Perform lightweight analysis for speed */
+  lightweightAnalysis?: boolean;
 }
 
 /**
@@ -586,51 +589,69 @@ await cache.init();
         }
       }
 
-      // Parse package.json
-      const parseTimer = createTimer();
-      console.log(chalk.gray(`→ Parsing package.json...`));
-
-      const pkg = await ErrorHandler.withErrorHandling(
-        async () => await this.parsePackageJson(projectDir),
-        { ...context, operation: 'parse-package-json' },
-        {
-          maxRetries: 3,
-          retryDelay: 500,
-          onRetry: (error, attempt) => {
-            logger.warn(`Retrying package.json parsing (attempt ${attempt}/3)`);
-          }
-        }
-      );
-
-      logger.debug(`Parsed package.json in ${parseTimer.getElapsedFormatted()}`);
-
-      // Parse lockfile
+      // Parse package.json and lockfile, potentially using lightweight analysis
+      let pkg: PackageDependency;
       let dependencies: Record<string, string>;
-      const lockfileTimer = createTimer();
 
-      try {
-        console.log(chalk.gray(`→ Parsing lockfile...`));
-
-        dependencies = await ErrorHandler.withErrorHandling(
-          async () => await this.parseLockfile(projectDir, this.options.packageManager),
-          { ...context, operation: 'parse-lockfile' },
+      if (this.options.lightweightAnalysis) {
+        console.log(chalk.gray(`→ Performing lightweight dependency analysis...`));
+        const analysisResult = await ErrorHandler.withErrorHandling(
+          async () => await dependencyAnalyzer.analyze(projectDir),
+          { ...context, operation: 'lightweight-analysis' },
           { maxRetries: 2 }
         );
+        pkg = await this.parsePackageJson(projectDir); // Still need pkg for scripts etc.
+        dependencies = Object.entries(analysisResult.dependencies).reduce((acc, [name, info]) => {
+          acc[name] = info.version;
+          return acc;
+        }, {} as Record<string, string>);
+        logger.debug(`Lightweight analysis completed.`);
+      } else {
+        // Existing full analysis logic
+        const parseTimer = createTimer();
+        console.log(chalk.gray(`→ Parsing package.json...`));
 
-        logger.debug(`Parsed lockfile in ${lockfileTimer.getElapsedFormatted()}`);
-      } catch (error) {
-        // Handle lockfile parsing errors with graceful fallback
-        if (error instanceof FlashError) {
-          logger.warn(`${error.message} (${error.category})`);
-        } else {
-          logger.warn(`Failed to parse lockfile: ${error}`);
-        }
+        pkg = await ErrorHandler.withErrorHandling(
+          async () => await this.parsePackageJson(projectDir),
+          { ...context, operation: 'parse-package-json' },
+          {
+            maxRetries: 3,
+            retryDelay: 500,
+            onRetry: (error, attempt) => {
+              logger.warn(`Retrying package.json parsing (attempt ${attempt}/3)`);
+            }
+          }
+        );
 
-        logger.warn(`Falling back to package.json dependencies`);
-        dependencies = { ...pkg.dependencies };
+        logger.debug(`Parsed package.json in ${parseTimer.getElapsedFormatted()}`);
 
-        if (this.options.includeDevDependencies) {
-          dependencies = { ...dependencies, ...pkg.devDependencies };
+        // Parse lockfile
+        const lockfileTimer = createTimer();
+
+        try {
+          console.log(chalk.gray(`→ Parsing lockfile...`));
+
+          dependencies = await ErrorHandler.withErrorHandling(
+            async () => await this.parseLockfile(projectDir, this.options.packageManager),
+            { ...context, operation: 'parse-lockfile' },
+            { maxRetries: 2 }
+          );
+
+          logger.debug(`Parsed lockfile in ${lockfileTimer.getElapsedFormatted()}`);
+        } catch (error) {
+          // Handle lockfile parsing errors with graceful fallback
+          if (error instanceof FlashError) {
+            logger.warn(`${error.message} (${error.category})`);
+          } else {
+            logger.warn(`Failed to parse lockfile: ${error}`);
+          }
+
+          logger.warn(`Falling back to package.json dependencies`);
+          dependencies = { ...pkg.dependencies };
+
+          if (this.options.includeDevDependencies) {
+            dependencies = { ...dependencies, ...pkg.devDependencies };
+          }
         }
       }
 

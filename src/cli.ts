@@ -90,7 +90,8 @@ program
   .option('--team-token <token>', 'Team access token')
   .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
   .option('--team-restrict', 'Restrict access to team members only', false)
-  .action(async (packages, options) => {
+  .option('--lightweight-analysis', 'Enable lightweight dependency analysis for faster installs on small projects', false)
+  .action(async (packages: any, options: any) => {
     try {
       const projectDir = process.cwd();
 
@@ -178,7 +179,8 @@ program
           registry: options.registry,
           workspace: workspaceOptions,
           network: networkOptions,
-          cloud: cloudCacheConfig
+          cloud: cloudCacheConfig,
+          lightweightAnalysis: options.lightweightAnalysis
         });
 
         await installer.init();
@@ -271,7 +273,8 @@ program
           registry: options.registry,
           workspace: workspaceOptions,
           network: networkOptions,
-          cloud: cloudCacheConfig
+          cloud: cloudCacheConfig,
+          lightweightAnalysis: options.lightweightAnalysis
         });
 
         await customInstaller.init();
@@ -294,7 +297,7 @@ program
   .option('-c, --compression <level>', 'Compression level (0-9)', '6')
   .option('-o, --output <path>', 'Output path for snapshot')
   .option('-t, --cache-timeout <seconds>', 'Timeout for cache operation in seconds', '30')
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -373,7 +376,7 @@ program
   .description('Restore node_modules from a .flashpack snapshot')
   .argument('[dir]', 'Project directory', '.')
   .option('-s, --snapshot <path>', 'Path to snapshot file')
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -407,7 +410,7 @@ program
   .option('-g, --global', 'Clean global cache instead of project', false)
   .option('-a, --all', 'Clean both project and global cache', false)
   .option('--cache-max-age <days>', 'Maximum age for cache entries in days', '30')
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -454,7 +457,7 @@ program
   .command('clean-modules')
   .description('Remove only node_modules directory (preserves snapshot)')
   .argument('[dir]', 'Project directory', '.')
-  .action(async (dir) => {
+  .action(async (dir: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -488,7 +491,7 @@ program
   .command('clean-snapshot')
   .description('Remove only snapshot file (preserves node_modules)')
   .argument('[dir]', 'Project directory', '.')
-  .action(async (dir) => {
+  .action(async (dir: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -523,7 +526,7 @@ program
   .alias('ui')
   .description('Start interactive TUI mode')
   .argument('[dir]', 'Project directory', '.')
-  .action(async (dir) => {
+  .action(async (dir: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -567,7 +570,7 @@ program
       .description('Set the package manager for a project')
       .argument('<manager>', 'Package manager to use (npm, yarn, pnpm, bun)')
       .argument('[dir]', 'Project directory', '.')
-      .action(async (manager, dir) => {
+      .action(async (manager: any, dir: any) => {
         // Resolve project directory
         const projectDir = path.resolve(dir);
 
@@ -658,7 +661,7 @@ program
     new Command('info')
       .description('Show information about available package managers')
       .argument('[dir]', 'Project directory', '.')
-      .action(async (dir) => {
+      .action(async (dir: any) => {
         // Resolve project directory
         const projectDir = path.resolve(dir);
 
@@ -715,7 +718,7 @@ program
   .option('-f, --force', 'Force sync even if dependencies are up to date', false)
   .option('--skip-snapshot', 'Skip creating snapshot after sync', false)
   .option('--skip-cache', 'Skip using cache during sync', false)
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     // Resolve project directory
     const projectDir = path.resolve(dir);
 
@@ -770,7 +773,7 @@ program
   .option('--team-token <token>', 'Team access token')
   .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
   .option('--team-restrict', 'Restrict access to team members only', false)
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       console.log(chalk.cyan(`
 ⚡ flash-install cloud-sync v${version}
@@ -835,7 +838,7 @@ const cacheCommand = program
   .description('Show cache information')
   .option('-v, --verify', 'Verify cache integrity', false)
   .option('-o, --optimize', 'Optimize cache', false)
-  .action(async (options) => {
+  .action(async (options: any) => {
     await cache.init();
 
     if (options.verify) {
@@ -882,7 +885,7 @@ cacheCommand
   .option('--disable', 'Disable cloud cache')
   .option('--enable', 'Enable cloud cache')
   .option('--test', 'Test cloud cache configuration')
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Initialize cache
       await cache.init();
@@ -999,7 +1002,7 @@ cacheCommand
   .description('Synchronize with cloud cache')
   .option('-d, --direction <direction>', 'Sync direction (upload, download, both)', 'both')
   .option('-f, --force', 'Force synchronization', false)
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Initialize cache
       await cache.init();
@@ -1109,7 +1112,7 @@ program
   .option('--registry <url>', 'Specify npm registry URL')
   .option('--timeout <ms>', 'Network check timeout in milliseconds', '5000')
   .option('--retries <number>', 'Number of retries for network operations', '2')
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       console.log(chalk.cyan(`\n⚡ Flash Install Network Check\n`));
 
@@ -1179,7 +1182,7 @@ program
   .option('--max-depth <depth>', 'Maximum depth to analyze')
   .option('--no-duplicates', 'Hide duplicate dependencies')
   .option('--no-sizes', 'Hide dependency sizes')
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     try {
       // Import dependency analyzer
       const { DependencyAnalyzer } = await import('./analysis.js');
@@ -1265,7 +1268,7 @@ program
   .option('--no-colors', 'Disable colors')
   .option('-f, --format <format>', 'Output format (tree, dot, markdown)', 'tree')
   .option('-o, --output <file>', 'Output file')
-  .action(async (dir, options) => {
+  .action(async (dir: any, options: any) => {
     try {
       // Import dependency analyzer and visualization
       const { DependencyAnalyzer } = await import('./analysis.js');
@@ -1346,7 +1349,7 @@ program
   .command('workspaces')
   .description('List workspace packages')
   .argument('[dir]', 'Project directory', '.')
-  .action(async (dir) => {
+  .action(async (dir: any) => {
     try {
       // Resolve project directory
       const projectDir = path.resolve(dir);
@@ -1422,7 +1425,7 @@ program
   .option('--no-cache', 'Disable cache')
   .option('--offline', 'Use offline mode')
   .option('--registry <url>', 'Specify npm registry URL')
-  .action(async (packages, options) => {
+  .action(async (packages: any, options: any) => {
     try {
       console.log(chalk.cyan(`
 ⚡ flash-install v${version}
@@ -1480,7 +1483,7 @@ program
   .argument('<package>', 'Package name with optional version (e.g., express or express@4.17.1)')
   .option('-o, --output <dir>', 'Output directory', './downloads')
   .option('-r, --registry <url>', 'Specify npm registry URL')
-  .action(async (packageName, options) => {
+  .action(async (packageName: any, options: any) => {
     try {
       // Configure installer
       const customInstaller = new Installer({

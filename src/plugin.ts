@@ -283,7 +283,7 @@ export class PluginManager {
 
           if (await fs.pathExists(pluginFile)) {
             try {
-              const plugin = await import(pluginFile);
+              const plugin = await import(this.toFileUrlIfNeeded(pluginFile));
 
               if (this.isValidPlugin(plugin.default)) {
                 discoveredPlugins.push({
@@ -357,7 +357,7 @@ export class PluginManager {
 
           if (await fs.pathExists(pluginFile)) {
             try {
-              const plugin = await import(pluginFile);
+              const plugin = await import(this.toFileUrlIfNeeded(pluginFile));
 
               if (this.isValidPlugin(plugin.default)) {
                 discoveredPlugins.push({
@@ -391,7 +391,7 @@ export class PluginManager {
 
             if (await fs.pathExists(resolvedPath)) {
               try {
-                const plugin = await import(resolvedPath);
+                const plugin = await import(this.toFileUrlIfNeeded(resolvedPath));
 
                 if (this.isValidPlugin(plugin.default)) {
                   discoveredPlugins.push({
@@ -415,8 +415,6 @@ export class PluginManager {
     } catch (error) {
       logger.warn(`Failed to discover plugins from package.json: ${error}`);
     }
-
-
   }
 
   /**
@@ -504,7 +502,7 @@ export class PluginManager {
       }
 
       // Load plugin
-      const plugin = await import(mainFilePath);
+      const plugin = await import(this.toFileUrlIfNeeded(mainFilePath));
 
       if (this.isValidPlugin(plugin.default)) {
         return plugin.default;
@@ -648,7 +646,7 @@ export class PluginManager {
       }
 
       // Load plugin
-      const plugin = await import(pluginPath);
+      const plugin = await import(this.toFileUrlIfNeeded(pluginPath));
 
       if (!this.isValidPlugin(plugin.default)) {
         logger.error('Invalid plugin format');
@@ -1061,6 +1059,20 @@ export class PluginManager {
         }
       }
     }
+  }
+
+  // Helper to convert a path to a file:// URL for ESM import on Windows
+  private toFileUrlIfNeeded(p: string): string {
+    if (process.platform === 'win32' && !p.startsWith('file://')) {
+      // Replace backslashes with forward slashes and encode spaces
+      let pathName = p.replace(/\\/g, '/');
+      // Handle drive letter
+      if (!pathName.startsWith('/')) {
+        pathName = '/' + pathName;
+      }
+      return 'file://' + pathName;
+    }
+    return p;
   }
 }
 
