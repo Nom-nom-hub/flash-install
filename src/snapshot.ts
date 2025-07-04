@@ -286,36 +286,82 @@ export class Snapshot {
       const snapshotSize = stats.size;
       const snapshotSizeFormatted = fsUtils.formatSize(snapshotSize);
 
-      // Create progress indicator
-      const progress = new ReliableProgress('Restoring snapshot');
-      progress.start();
-      progress.updateStatus(`Preparing to restore snapshot (${snapshotSizeFormatted})`);
+      // Improved progress indicator
+      let processedBytes = 0;
+      let lastPercent = 0;
+      let lastUpdate = Date.now();
+      process.stdout.write(`\x1b[36m\nRestoring from snapshot: ${snapshotSizeFormatted}\n\x1b[0m`);
+      process.stdout.write('[' + ' '.repeat(50) + `] 0%`);
 
       // Remove existing node_modules if present
       if (await fsUtils.directoryExists(nodeModulesPath)) {
-        progress.updateStatus(`Removing existing node_modules...`);
+        process.stdout.write(`\n\x1b[33mRemoving existing node_modules...\x1b[0m\n`);
         await fsUtils.remove(nodeModulesPath);
       }
 
       // Ensure project directory exists
       await fsUtils.ensureDir(projectDir);
-
-      // Create node_modules directory
       await fsUtils.ensureDir(nodeModulesPath);
 
-      // Determine extraction method based on file extension and available tools
-      const isNativeAvailable = this.isNativeExtractionAvailable(flashpackPath);
+      // Use streaming extraction for tar.gz
+      if (flashpackPath.endsWith('.tar.gz') || flashpackPath.endsWith('.tgz')) {
+        const readStream = createReadStream(flashpackPath);
+        const gunzip = require('zlib').createGunzip();
+        const tar = require('tar-stream').extract();
+        let totalFiles = 0;
+        let extractedFiles = 0;
 
-      if (isNativeAvailable) {
-        // Use native extraction (fastest)
-        await this.extractWithNativeTools(flashpackPath, projectDir, progress);
+        tar.on('entry', (header: any, stream: NodeJS.ReadableStream, next: () => void) => {
+          totalFiles++;
+          const filePath = path.join(projectDir, header.name);
+          fsUtils.ensureDir(path.dirname(filePath)).then(() => {
+            const writeStream = createWriteStream(filePath);
+            stream.pipe(writeStream);
+            stream.on('data', (chunk: Buffer) => {
+              processedBytes += chunk.length;
+              const percent = Math.floor((processedBytes / snapshotSize) * 100);
+              if (percent !== lastPercent && Date.now() - lastUpdate > 100) {
+                lastPercent = percent;
+                lastUpdate = Date.now();
+                const bar = '='.repeat(percent / 2) + ' '.repeat(50 - percent / 2);
+                process.stdout.write(`\r[${bar}] ${percent}%`);
+              }
+            });
+            writeStream.on('finish', () => {
+              extractedFiles++;
+              next();
+            });
+          });
+        });
+        tar.on('finish', () => {
+          process.stdout.write(`\r[${'='.repeat(50)}] 100%\n`);
+        });
+        await new Promise((resolve, reject) => {
+          readStream.pipe(gunzip).pipe(tar);
+          tar.on('finish', resolve);
+          tar.on('error', reject);
+        });
       } else {
-        // Use streaming extraction (memory efficient)
-        await this.extractWithStreaming(flashpackPath, projectDir, progress);
+        // Fallback to decompress with progress
+        const decompress = require('decompress');
+        let fileCount = 0;
+        await decompress(flashpackPath, projectDir, {
+          filter: () => true,
+          map: (file: any) => {
+            processedBytes += file.data.length;
+            fileCount++;
+            const percent = Math.floor((processedBytes / snapshotSize) * 100);
+            if (percent !== lastPercent && Date.now() - lastUpdate > 100) {
+              lastPercent = percent;
+              lastUpdate = Date.now();
+              const bar = '='.repeat(percent / 2) + ' '.repeat(50 - percent / 2);
+              process.stdout.write(`\r[${bar}] ${percent}%`);
+            }
+            return file;
+          }
+        });
+        process.stdout.write(`\r[${'='.repeat(50)}] 100%\n`);
       }
-
-      // Stop progress indicator
-      progress.stop();
 
       // Calculate elapsed time
       const endTime = performance.now();
@@ -323,25 +369,25 @@ export class Snapshot {
       const extractionSpeed = snapshotSize / (elapsedMs / 1000); // bytes per second
 
       // Log success with timing and speed information
-      logger.success(`Restored node_modules from snapshot in ${timer.getElapsedFormatted()}`);
-      logger.info(`Extraction speed: ${fsUtils.formatSize(extractionSpeed)}/s`);
+      process.stdout.write(`\x1b[32m\n✓ Restored node_modules from snapshot in ${timer.getElapsedFormatted()}\n\x1b[0m`);
+      process.stdout.write(`\x1b[36mExtraction speed: ${fsUtils.formatSize(extractionSpeed)}/s\x1b[0m\n`);
 
       // Get node_modules size if it exists
       if (await fsUtils.directoryExists(nodeModulesPath)) {
         try {
           const nodeModulesStats = await fsUtils.getSize(nodeModulesPath);
-          logger.info(`Restored ${fsUtils.formatSize(nodeModulesStats)} of dependencies`);
+          process.stdout.write(`\x1b[36mRestored ${fsUtils.formatSize(nodeModulesStats)} of dependencies\x1b[0m\n`);
         } catch (error) {
-          logger.warn(`Could not determine size of restored dependencies`);
+          process.stdout.write(`\x1b[33mCould not determine size of restored dependencies\x1b[0m\n`);
         }
       } else {
-        logger.warn(`node_modules directory not found after restoration`);
-        logger.info(`Try running 'flash-install' to install dependencies`);
+        process.stdout.write(`\x1b[31mnode_modules directory not found after restoration\x1b[0m\n`);
+        process.stdout.write(`\x1b[33mTry running 'flash-install' to install dependencies\x1b[0m\n`);
       }
 
       return true;
     } catch (error) {
-      logger.error(`Failed to restore snapshot: ${error}`);
+      process.stdout.write(`\x1b[31mFailed to restore snapshot: ${error}\x1b[0m\n`);
       return false;
     }
   }
@@ -570,7 +616,7 @@ export class Snapshot {
       // Use decompress with progress tracking
       await decompress(snapshotPath, projectDir, {
         filter: () => true,
-        map: (file) => {
+        map: (file: any) => {
           processedBytes += file.data.length;
           const percent = Math.min(99, Math.round((processedBytes / totalSize) * 100));
           progress.updateStatus(`Extracting: ${percent}% (${fsUtils.formatSize(processedBytes)})`);
@@ -696,7 +742,7 @@ export class Snapshot {
       let metadataFound = false;
 
       // Handle extracted entries
-      extract.on('entry', (header: TarHeader, stream: NodeJS.ReadableStream, next: TarNext) => {
+      extract.on('entry', (header: any, stream: NodeJS.ReadableStream, next: () => void) => {
         // Check if this is the metadata file
         if (header.name === '.flashpack-metadata.json') {
           metadataFound = true;

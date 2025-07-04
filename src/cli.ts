@@ -54,7 +54,13 @@ program
   .name('flash-install')
   .description('A fast, drop-in replacement for npm install with deterministic caching')
   .version(version)
-  .option('--debug', 'Enable debug mode', false);
+  .option('--debug', 'Enable debug mode', false)
+  .option('--fast', 'Enable fast mode (skip plugins/hooks/logging)', false)
+  .option('--ultra-fast', 'Enable ultra-fast mode: max parallelism, native extraction, skip plugins/hooks/scripts, minimal logging', false)
+  .option('--install-timeout <ms>', 'Install task timeout in milliseconds', '120000')
+  .option('--concurrency <number>', 'Number of concurrent workers', '10')
+  .option('--batch-size <number>', 'Number of packages per batch', '10')
+  .enablePositionalOptions();
 
 // Default command (install)
 program
@@ -91,9 +97,24 @@ program
   .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
   .option('--team-restrict', 'Restrict access to team members only', false)
   .option('--lightweight-analysis', 'Enable lightweight dependency analysis for faster installs on small projects', false)
-  .action(async (packages: any, options: any) => {
+  .action(async (packages: any, options: any, command: any) => {
     try {
       const projectDir = process.cwd();
+      // If user typed 'install' as the first argument, treat it as default install
+      if (packages && packages[0] === 'install') {
+        packages.shift();
+      }
+
+      if (options.ultraFast) {
+        options.fast = true;
+        options.concurrency = '32';
+        options.batchSize = '32';
+        options.skipPlugins = true;
+        options.skipHooks = true;
+        options.skipPostinstall = true;
+        options.minimalLogging = true;
+        options.nativeExtraction = true;
+      }
 
       // If specific packages are provided, install them
       if (packages && packages.length > 0) {
@@ -180,7 +201,9 @@ program
           workspace: workspaceOptions,
           network: networkOptions,
           cloud: cloudCacheConfig,
-          lightweightAnalysis: options.lightweightAnalysis
+          lightweightAnalysis: options.lightweightAnalysis,
+          fastMode: options.fast,
+          installTimeoutMs: parseInt(options.installTimeout || '120000', 10)
         });
 
         await installer.init();
@@ -274,7 +297,9 @@ program
           workspace: workspaceOptions,
           network: networkOptions,
           cloud: cloudCacheConfig,
-          lightweightAnalysis: options.lightweightAnalysis
+          lightweightAnalysis: options.lightweightAnalysis,
+          fastMode: options.fast,
+          installTimeoutMs: parseInt(options.installTimeout || '120000', 10)
         });
 
         await customInstaller.init();
@@ -1501,6 +1526,18 @@ program
       logger.error(`Failed to download package: ${error}`);
       process.exit(1);
     }
+  });
+
+// Add a hidden 'install' command as an alias for the default install
+program
+  .command('install [packages...]', { isDefault: false, hidden: true })
+  .description('(Alias) Install dependencies (same as default)')
+  .allowUnknownOption()
+  .action((packages: any, options: any, command: any) => {
+    // Re-run the default command logic, passing through arguments
+    // This triggers the default action above
+    const args = process.argv.slice(0, 2).concat(packages || []);
+    program.parse(args, { from: 'user' });
   });
 
 // Parse command line arguments

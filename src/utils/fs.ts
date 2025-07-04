@@ -380,50 +380,56 @@ export async function exists(targetPath: string): Promise<boolean> {
  * Create a tarball from a directory
  * @param sourceDir Source directory
  * @param outputFile Output tarball file
+ * @param options Options for the tarball creation
  * @returns Promise that resolves when the tarball is created
  */
-export async function createTarball(sourceDir: string, outputFile: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    // Ensure output directory exists
-    fs.ensureDirSync(path.dirname(outputFile));
-
+export async function createTarball(sourceDir: string, outputFile: string, options: { nativeExtraction?: boolean } = {}): Promise<void> {
+  if (options.nativeExtraction) {
     // Use tar command for better performance
-    const cmd = `tar -czf "${outputFile}" -C "${path.dirname(sourceDir)}" "${path.basename(sourceDir)}"`;
-
-    exec(cmd, (error) => {
-      if (error) {
-        logger.error(`Failed to create tarball: ${error}`);
-        reject(error);
-      } else {
-        resolve();
-      }
+    return new Promise<void>((resolve, reject) => {
+      fs.ensureDirSync(path.dirname(outputFile));
+      const cmd = `tar -czf "${outputFile}" -C "${path.dirname(sourceDir)}" "${path.basename(sourceDir)}"`;
+      exec(cmd, (error) => {
+        if (error) {
+          logger.error(`Failed to create tarball: ${error}`);
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
     });
-  });
+  } else {
+    // TODO: Add JS fallback extraction logic here
+    throw new Error('JS fallback for createTarball not implemented');
+  }
 }
 
 /**
  * Extract a tarball to a directory
  * @param tarballFile Tarball file
  * @param outputDir Output directory
+ * @param options Options for the extraction
  * @returns Promise that resolves when the tarball is extracted
  */
-export async function extractTarball(tarballFile: string, outputDir: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    // Ensure output directory exists
-    fs.ensureDirSync(outputDir);
-
+export async function extractTarball(tarballFile: string, outputDir: string, options: { nativeExtraction?: boolean } = {}): Promise<void> {
+  if (options.nativeExtraction) {
     // Use tar command for better performance
-    const cmd = `tar -xzf "${tarballFile}" -C "${outputDir}"`;
-
-    exec(cmd, (error) => {
-      if (error) {
-        logger.error(`Failed to extract tarball: ${error}`);
-        reject(error);
-      } else {
-        resolve();
-      }
+    return new Promise<void>((resolve, reject) => {
+      fs.ensureDirSync(outputDir);
+      const cmd = `tar -xzf "${tarballFile}" -C "${outputDir}"`;
+      exec(cmd, (error) => {
+        if (error) {
+          logger.error(`Failed to extract tarball: ${error}`);
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
     });
-  });
+  } else {
+    // TODO: Add JS fallback extraction logic here
+    throw new Error('JS fallback for extractTarball not implemented');
+  }
 }
 
 /**

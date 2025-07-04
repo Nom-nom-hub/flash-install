@@ -76,6 +76,14 @@ export interface InstallOptions extends TypedInstallOptions {
   cloud?: CloudCacheConfig;
   /** Perform lightweight analysis for speed */
   lightweightAnalysis?: boolean;
+  /** Enable fast mode (skip plugins/hooks/logging) */
+  fastMode?: boolean;
+  installTimeoutMs: number;
+  batchSize?: number;
+  skipPlugins?: boolean;
+  skipHooks?: boolean;
+  minimalLogging?: boolean;
+  nativeExtraction?: boolean;
 }
 
 /**
@@ -101,7 +109,8 @@ const defaultOptions: InstallOptions = {
     retries: 2,
     allowFallbacks: true,
     warnOutdated: true
-  }
+  },
+  installTimeoutMs: 120000
 };
 
 /**
@@ -142,7 +151,7 @@ await cache.init();
 
     // Create worker pool for parallel installation
     if (this.options.concurrency > 1) {
-      const workerFunction = createWorkerFunction(async (pkg: PackageDependency) => {
+      const workerFunction = createWorkerFunction<PackageDependency, boolean>(async (pkg: PackageDependency) => {
         try {
           // This function will run in parallel
           const nodeModulesPath = path.join(pkg.path, 'node_modules', pkg.name);
@@ -203,9 +212,9 @@ await cache.init();
           console.error(`Error installing ${pkg.name}@${pkg.version}: ${error}`);
           return false;
         }
-      });
+      }, this.options.installTimeoutMs);
 
-      this.workerPool = new WorkerPool<PackageDependency, boolean>(workerFunction, this.options.concurrency);
+      this.workerPool = new WorkerPool<PackageDependency, boolean>(workerFunction, this.options.concurrency, { taskTimeoutMs: this.options.installTimeoutMs, initialBatchSize: this.options.batchSize });
       await this.workerPool.init();
     }
   }
@@ -508,25 +517,22 @@ await cache.init();
     };
 
     try {
-      // Print banner
-      console.log(chalk.cyan(`
-⚡ flash-install v${version}
-      `));
-
-      console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
-
-      // Initialize plugin manager with the correct project directory
-      await ErrorHandler.withErrorHandling(
-        async () => await pluginManager.init(projectDir),
-        { ...context, operation: 'plugin-init' },
-        {
-          maxRetries: 2,
-          onRetry: (error, attempt) => {
-            logger.warn(`Retrying plugin initialization (attempt ${attempt}/2)`);
+      if (!this.options.fastMode) {
+        // Print banner
+        console.log(chalk.cyan(`\n⚡ flash-install v${version}\n      `));
+        console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
+        // Initialize plugin manager with the correct project directory
+        await ErrorHandler.withErrorHandling(
+          async () => await pluginManager.init(projectDir),
+          { ...context, operation: 'plugin-init' },
+          {
+            maxRetries: 2,
+            onRetry: (error, attempt) => {
+              logger.warn(`Retrying plugin initialization (attempt ${attempt}/2)`);
+            }
           }
-        }
-      );
-
+        );
+      }
       // Detect package manager if not specified
       if (!this.options.packageManager) {
         this.options.packageManager = this.detectPackageManager(projectDir);
@@ -684,10 +690,12 @@ await cache.init();
         workspaces: hasWorkspaces ? workspaceManager.getPackages() : []
       };
 
-      // Run pre-install hooks
-      console.log('\n🔌 Running PRE_INSTALL hooks...');
-      await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
-      console.log('🔌 Finished running PRE_INSTALL hooks');
+      if (!this.options.fastMode) {
+        // Run pre-install hooks
+        console.log('\n🔌 Running PRE_INSTALL hooks...');
+        await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+        console.log('🔌 Finished running PRE_INSTALL hooks');
+      }
 
       // Check if we have a valid snapshot
       const snapshotCheckTimer = createTimer();
@@ -959,9 +967,11 @@ await cache.init();
       }
 
       // Run post-install hooks
-      console.log('\n🔌 Running POST_INSTALL hooks...');
-      await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
-      console.log('🔌 Finished running POST_INSTALL hooks');
+      if (!this.options.fastMode) {
+        console.log('\n🔌 Running POST_INSTALL hooks...');
+        await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
+        console.log('🔌 Finished running POST_INSTALL hooks');
+      }
 
       // Log total time
       logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
@@ -1770,10 +1780,10 @@ await cache.init();
     try {
       // Start timer
       const totalTimer = createTimer();
-
-      // Initialize plugin manager with the correct project directory
-      await pluginManager.init(projectDir);
-
+      if (!this.options.fastMode) {
+        // Initialize plugin manager with the correct project directory
+        await pluginManager.init(projectDir);
+      }
       // Create plugin context
       const nodeModulesPath = path.join(projectDir, 'node_modules');
       const pluginContext = {
@@ -1783,28 +1793,26 @@ await cache.init();
         packageManager: this.options.packageManager,
         packages: packages
       };
-
-      // Run pre-install hooks
-      console.log('\n🔌 Running PRE_INSTALL hooks...');
-      await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
-      console.log('🔌 Finished running PRE_INSTALL hooks');
-
+      if (!this.options.fastMode) {
+        // Run pre-install hooks
+        console.log('\n🔌 Running PRE_INSTALL hooks...');
+        await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+        console.log('🔌 Finished running PRE_INSTALL hooks');
+      }
       // Install packages
       const success = await installPackages(projectDir, packages, this.options.packageManager, {
         ...options,
         registry: this.options.registry
       });
 
-      if (success) {
+      if (success && !this.options.fastMode) {
         // Run post-install hooks
         console.log('\n🔌 Running POST_INSTALL hooks...');
         await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
         console.log('🔌 Finished running POST_INSTALL hooks');
-
         // Log total time
         logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
       }
-
       return success;
     } catch (error) {
       logger.error(`Failed to install packages: ${error}`);

@@ -31,6 +31,7 @@ export class WorkerPool<T, R> {
   private memoryUsageHistory: number[] = [];
   private taskTimings: number[] = [];
   private isInitialized: boolean = false;
+  private taskTimeoutMs: number;
 
   /**
    * Create a new worker pool
@@ -47,6 +48,7 @@ export class WorkerPool<T, R> {
       initialBatchSize?: number;
       maxBatchSize?: number;
       minBatchSize?: number;
+      taskTimeoutMs?: number;
     } = {}
   ) {
     this.workerFn = workerFn;
@@ -67,6 +69,8 @@ export class WorkerPool<T, R> {
     this.batchSize = options.initialBatchSize || numWorkers * 2;
     this.maxBatchSize = options.maxBatchSize || numWorkers * 10;
     this.minBatchSize = options.minBatchSize || numWorkers;
+
+    this.taskTimeoutMs = options.taskTimeoutMs || 120000; // Default: 2 minutes
 
     logger.debug(`Worker pool created with ${numWorkers} workers`);
     logger.debug(`Memory limit: ${Math.round(this.memoryLimit / 1024 / 1024)}MB`);
@@ -380,7 +384,7 @@ export class WorkerPool<T, R> {
  * Create a worker function that can be used with the worker pool
  * Enhanced version with improved memory management and error handling
  */
-export function createWorkerFunction<T, R>(fn: (data: T) => Promise<R> | R): (data: T) => Promise<R> {
+export function createWorkerFunction<T, R>(fn: (data: T) => Promise<R> | R, timeoutMs = 120000): (data: T) => Promise<R> {
   return async (data: T): Promise<R> => {
     // Track start time for performance monitoring
     const startTime = performance.now();
@@ -409,8 +413,8 @@ export function createWorkerFunction<T, R>(fn: (data: T) => Promise<R> | R): (da
       const timeoutPromise = new Promise<R>((_, reject) => {
         const timeout = setTimeout(() => {
           clearTimeout(timeout);
-          reject(new Error('Task execution timed out (30s)'));
-        }, 30000); // 30 second timeout
+          reject(new Error(`Task execution timed out (${timeoutMs/1000}s)`));
+        }, timeoutMs);
       });
 
       // Race between the actual task and the timeout

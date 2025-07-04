@@ -30,6 +30,8 @@ export interface InstallOptions {
   skipPostinstall?: boolean;
   /** Workspace options */
   workspace?: WorkspaceOptions;
+  /** Enable fast mode (skip plugins/hooks/logging) */
+  fastMode?: boolean;
 }
 
 /**

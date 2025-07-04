@@ -71,7 +71,7 @@
     "utils-merge": "1.0.1",
     "vary": "1.1.2"
   },
-  "timestamp": 1751431124467,
+  "timestamp": 1751561503784,
   "format": "tar.gz",
   "fingerprint": {
     "dependencies": {
@@ -147,8 +147,8 @@
       "vary": "1.1.2"
     },
     "lockfileHash": "32b79f85538eccfebc53adfa9472b1b048924d50f279417665cbbbbc4d8fc9b8",
-    "nodeVersion": "v22.16.0",
-    "timestamp": 1751431124466,
+    "nodeVersion": "v22.17.0",
+    "timestamp": 1751561503784,
     "platform": "win32",
     "arch": "x64"
   }
