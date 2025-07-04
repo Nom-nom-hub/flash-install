@@ -166,3 +166,15 @@ demos/vercel-partnership-report/
 demos/vercel-partnership-materials.zip
 demos/new-test-project/
 demos/test-project/
+
+.flashpack-metadata.json
+flash-install-cli-*.tgz
+README.md.bak
+
+blog-fix-implementation.md
+comprehensive-release-notes.md
+daily-dev-post.md
+devplan.md
+roadmap-v1.9.md
+v1.9-release-process.md
+v1.9-testing-strategy.md
