@@ -306,8 +306,10 @@ export class Snapshot {
       // Use streaming extraction for tar.gz
       if (flashpackPath.endsWith('.tar.gz') || flashpackPath.endsWith('.tgz')) {
         const readStream = createReadStream(flashpackPath);
-        const gunzip = require('zlib').createGunzip();
-        const tar = require('tar-stream').extract();
+        const { createGunzip } = await import('zlib');
+        const gunzip = createGunzip();
+        const tarStream = await import('tar-stream');
+        const tar = tarStream.extract();
         let totalFiles = 0;
         let extractedFiles = 0;
 
@@ -343,7 +345,7 @@ export class Snapshot {
         });
       } else {
         // Fallback to decompress with progress
-        const decompress = require('decompress');
+        const decompress = (await import('decompress')).default;
         let fileCount = 0;
         await decompress(flashpackPath, projectDir, {
           filter: () => true,

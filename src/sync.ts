@@ -161,8 +161,9 @@ export class Sync {
             }[packageManager];
 
             await fs.ensureDir(packagePath);
+            const { exec } = await import('child_process');
             await new Promise<void>((resolve, reject) => {
-              const child = require('child_process').exec(cmd, { cwd: projectDir });
+              const child = exec(cmd, { cwd: projectDir });
               child.on('close', (code: number) => {
                 if (code === 0) {
                   resolve();

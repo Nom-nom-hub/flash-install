@@ -518,20 +518,20 @@ await cache.init();
 
     try {
       if (!this.options.fastMode) {
-        // Print banner
-        console.log(chalk.cyan(`\n⚡ flash-install v${version}\n      `));
-        console.log(chalk.cyan(`⚡ Installing dependencies in ${chalk.bold(projectDir)}`));
-        // Initialize plugin manager with the correct project directory
-        await ErrorHandler.withErrorHandling(
-          async () => await pluginManager.init(projectDir),
-          { ...context, operation: 'plugin-init' },
-          {
-            maxRetries: 2,
-            onRetry: (error, attempt) => {
-              logger.warn(`Retrying plugin initialization (attempt ${attempt}/2)`);
-            }
+      // Print banner
+        logger.flash(`flash-install v${version}`);
+      logger.flash(`Installing dependencies in ${projectDir}`);
+      // Initialize plugin manager with the correct project directory
+      await ErrorHandler.withErrorHandling(
+        async () => await pluginManager.init(projectDir),
+        { ...context, operation: 'plugin-init' },
+        {
+          maxRetries: 2,
+          onRetry: (error, attempt) => {
+            logger.warn(`Retrying plugin initialization (attempt ${attempt}/2)`);
           }
-        );
+        }
+      );
       }
       // Detect package manager if not specified
       if (!this.options.packageManager) {
@@ -565,12 +565,12 @@ await cache.init();
       // Get package manager version
       const packageManagerVersion = this.getPackageManagerVersion(this.options.packageManager);
 
-      console.log(chalk.gray(`→ Using package manager: ${chalk.bold(this.options.packageManager)}${packageManagerVersion ? ` v${packageManagerVersion}` : ''}`));
+      logger.info(`Using package manager: ${this.options.packageManager}${packageManagerVersion ? ` v${packageManagerVersion}` : ''}`);
 
       // Check for workspaces
       let hasWorkspaces = false;
       if (this.options.workspace?.enabled) {
-        console.log(chalk.gray(`→ Checking for workspaces...`));
+        logger.info(`Checking for workspaces...`);
 
         try {
           hasWorkspaces = await ErrorHandler.withErrorHandling(
@@ -580,9 +580,9 @@ await cache.init();
           );
 
           if (hasWorkspaces) {
-            console.log(chalk.cyan(`✓ Found ${chalk.bold(workspaceManager.getPackages().length.toString())} workspace packages`));
+            logger.success(`Found ${workspaceManager.getPackages().length.toString()} workspace packages`);
           } else {
-            console.log(chalk.gray(`→ No workspaces found, continuing with regular installation`));
+            logger.info(`No workspaces found, continuing with regular installation`);
           }
         } catch (error) {
           // If workspace initialization fails, continue with regular installation
@@ -600,7 +600,7 @@ await cache.init();
       let dependencies: Record<string, string>;
 
       if (this.options.lightweightAnalysis) {
-        console.log(chalk.gray(`→ Performing lightweight dependency analysis...`));
+        logger.info(`Performing lightweight dependency analysis...`);
         const analysisResult = await ErrorHandler.withErrorHandling(
           async () => await dependencyAnalyzer.analyze(projectDir),
           { ...context, operation: 'lightweight-analysis' },
@@ -615,7 +615,7 @@ await cache.init();
       } else {
         // Existing full analysis logic
         const parseTimer = createTimer();
-        console.log(chalk.gray(`→ Parsing package.json...`));
+        logger.info(`Parsing package.json...`);
 
         pkg = await ErrorHandler.withErrorHandling(
           async () => await this.parsePackageJson(projectDir),
@@ -635,7 +635,7 @@ await cache.init();
         const lockfileTimer = createTimer();
 
         try {
-          console.log(chalk.gray(`→ Parsing lockfile...`));
+          logger.info(`Parsing lockfile...`);
 
           dependencies = await ErrorHandler.withErrorHandling(
             async () => await this.parseLockfile(projectDir, this.options.packageManager),
@@ -663,7 +663,7 @@ await cache.init();
 
       // If we have workspaces and hoisting is enabled, merge dependencies
       if (hasWorkspaces && this.options.workspace?.hoistDependencies) {
-        console.log(chalk.gray(`→ Hoisting workspace dependencies...`));
+        logger.info(`Hoisting workspace dependencies...`);
         const workspaceDeps = workspaceManager.getAllDependencies(this.options.includeDevDependencies);
 
         // Merge with root dependencies, preferring workspace versions
@@ -673,11 +673,11 @@ await cache.init();
 
         // Log updated dependency count
         const depCount = Object.keys(dependencies).length;
-        console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install (including workspace dependencies)`));
+        logger.success(`Found ${depCount.toString()} ${depCount === 1 ? 'dependency' : 'dependencies'} to install (including workspace dependencies)`);
       } else {
         // Log dependency count
         const depCount = Object.keys(dependencies).length;
-        console.log(chalk.cyan(`✓ Found ${chalk.bold(depCount.toString())} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`));
+        logger.success(`Found ${depCount.toString()} ${depCount === 1 ? 'dependency' : 'dependencies'} to install`);
       }
 
       // Create plugin context
@@ -691,20 +691,20 @@ await cache.init();
       };
 
       if (!this.options.fastMode) {
-        // Run pre-install hooks
-        console.log('\n🔌 Running PRE_INSTALL hooks...');
-        await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
-        console.log('🔌 Finished running PRE_INSTALL hooks');
+      // Run pre-install hooks
+      logger.info('Running PRE_INSTALL hooks...');
+      await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+      logger.info('Finished running PRE_INSTALL hooks');
       }
 
       // Check if we have a valid snapshot
       const snapshotCheckTimer = createTimer();
-      console.log(chalk.gray(`→ Checking for valid snapshot...`));
+      logger.info(`Checking for valid snapshot...`);
       const hasValidSnapshot = await snapshot.isValid(projectDir, dependencies);
       logger.debug(`Checked snapshot validity in ${snapshotCheckTimer.getElapsedFormatted()}`);
 
       if (hasValidSnapshot) {
-        console.log(chalk.green(`✓ Valid .flashpack snapshot found, restoring from snapshot...`));
+        logger.success(`Valid .flashpack snapshot found, restoring from snapshot...`);
 
         // Run pre-restore hooks
         await pluginManager.runHook(PluginHook.PRE_RESTORE, pluginContext);
@@ -717,15 +717,15 @@ await cache.init();
           // Run post-restore hooks
           await pluginManager.runHook(PluginHook.POST_RESTORE, pluginContext);
 
-          console.log(chalk.green(`✓ Restored from snapshot in ${chalk.bold(restoreTimer.getElapsedFormatted())}`));
-          console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
+          logger.success(`Restored from snapshot in ${restoreTimer.getElapsedFormatted()}`);
+          logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
 
           // Compare with estimated npm install time
           const depCount = Object.keys(dependencies).length;
           const estimatedNpmTime = depCount * 0.5; // rough estimate: 0.5s per dependency
           const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
           if (speedup > 1) {
-            console.log(chalk.cyan(`⚡ ${speedup.toFixed(1)}x faster than npm install`));
+            logger.flash(`${speedup.toFixed(1)}x faster than npm install`);
           }
 
           // Run post-install hooks
@@ -738,12 +738,12 @@ await cache.init();
       // Check if we have the dependency tree in cache
       if (this.options.useCache) {
         const cacheCheckTimer = createTimer();
-        console.log(chalk.gray(`→ Checking cache for dependency tree...`));
+        logger.info(`Checking cache for dependency tree...`);
         const hasCachedTree = await cache.hasDependencyTree(dependencies);
         logger.debug(`Checked cache in ${cacheCheckTimer.getElapsedFormatted()}`);
 
         if (hasCachedTree) {
-          console.log(chalk.green(`✓ Dependency tree found in cache, restoring...`));
+          logger.success(`Dependency tree found in cache, restoring...`);
           const restoreTimer = createTimer();
 
           // Show progress during cache restoration
@@ -761,15 +761,15 @@ await cache.init();
           process.stdout.write(`\r${chalk.gray(`→ Restoring from cache... 100%`)}\n`);
 
           if (success) {
-            console.log(chalk.green(`✓ Restored from cache in ${chalk.bold(restoreTimer.getElapsedFormatted())}`));
-            console.log(chalk.green(`✓ Total time: ${chalk.bold(totalTimer.getElapsedFormatted())}`));
+            logger.success(`Restored from cache in ${restoreTimer.getElapsedFormatted()}`);
+            logger.success(`Total time: ${totalTimer.getElapsedFormatted()}`);
 
             // Compare with estimated npm install time
             const depCount2 = Object.keys(dependencies).length;
             const estimatedNpmTime = depCount2 * 0.5; // rough estimate: 0.5s per dependency
             const speedup = estimatedNpmTime / restoreTimer.getElapsedSeconds();
             if (speedup > 1) {
-              console.log(chalk.cyan(`⚡ ${speedup.toFixed(1)}x faster than npm install`));
+              logger.flash(`${speedup.toFixed(1)}x faster than npm install`);
             }
 
             // Run post-install hooks
@@ -778,7 +778,7 @@ await cache.init();
 
           return success;
         } else {
-          console.log(chalk.gray(`→ No cache hit found for current dependencies`));
+          logger.info(`No cache hit found for current dependencies`);
         }
       }
 
@@ -786,7 +786,7 @@ await cache.init();
       let networkStatus = NetworkStatus.ONLINE;
 
       if (this.options.network?.checkAvailability) {
-        console.log(chalk.gray(`→ Checking network availability...`));
+        logger.info(`Checking network availability...`);
 
         try {
           const networkCheck = await networkManager.checkNetwork({
@@ -798,14 +798,14 @@ await cache.init();
           networkStatus = networkCheck.status;
 
           if (networkStatus === NetworkStatus.OFFLINE) {
-            console.log(chalk.yellow(`⚠ Network is offline`));
+            logger.warn(`Network is offline`);
           } else if (networkStatus === NetworkStatus.PARTIAL) {
-            console.log(chalk.yellow(`⚠ Network is partially available (${networkCheck.registryAvailable ? 'registry available' : 'registry unavailable'})`));
+            logger.warn(`Network is partially available (${networkCheck.registryAvailable ? 'registry available' : 'registry unavailable'})`);
           }
         } catch (error) {
           logger.debug(`Network check failed: ${error}`);
           networkStatus = NetworkStatus.UNKNOWN;
-          console.log(chalk.yellow(`⚠ Network status check failed, assuming offline`));
+          logger.warn(`Network status check failed, assuming offline`);
         }
       }
 
@@ -813,7 +813,7 @@ await cache.init();
       if (this.options.offline || networkStatus === NetworkStatus.OFFLINE) {
         // Try to find fallbacks for all dependencies
         if (this.options.network?.allowFallbacks) {
-          console.log(chalk.cyan(`→ Searching for fallbacks in offline mode...`));
+          logger.info(`Searching for fallbacks in offline mode...`);
 
           const fallbacks = await fallbackManager.findFallbacks(dependencies, {
             allowVersionFallback: true,
@@ -831,11 +831,11 @@ await cache.init();
           const missing = totalDeps - foundExact - foundFallback;
 
           if (missing === 0) {
-            console.log(chalk.green(`✓ Found fallbacks for all ${totalDeps} dependencies (${foundExact} exact, ${foundFallback} compatible versions)`));
+            logger.success(`Found fallbacks for all ${totalDeps} dependencies (${foundExact} exact, ${foundFallback} compatible versions)`);
 
             // Install from fallbacks
             const fallbackTimer = createTimer();
-            console.log(chalk.cyan(`→ Installing from fallbacks...`));
+            logger.info(`Installing from fallbacks...`);
 
             const fallbackSuccess = await this.installFromFallbacks(projectDir, fallbacks);
 
@@ -844,16 +844,16 @@ await cache.init();
 
               // Warn about non-exact versions if needed
               if (foundFallback > 0 && this.options.network?.warnOutdated) {
-                console.log(chalk.yellow(`⚠ ${foundFallback} dependencies were installed with compatible versions rather than exact versions`));
-                console.log(chalk.yellow(`⚠ Run 'flash-install sync' when online to update to exact versions`));
+                              logger.warn(`${foundFallback} dependencies were installed with compatible versions rather than exact versions`);
+              logger.warn(`Run 'flash-install sync' when online to update to exact versions`);
               }
 
               return true;
             } else {
-              console.log(chalk.red(`✗ Failed to install from fallbacks`));
+              logger.error(`Failed to install from fallbacks`);
             }
           } else {
-            console.log(chalk.red(`✗ Missing fallbacks for ${missing} dependencies in offline mode`));
+            logger.error(`Missing fallbacks for ${missing} dependencies in offline mode`);
 
             // List missing dependencies
             const missingDeps = Object.entries(dependencies)
@@ -861,23 +861,23 @@ await cache.init();
               .map(([name, version]) => `${name}@${version}`)
               .join(', ');
 
-            console.log(chalk.red(`Missing: ${missingDeps}`));
+            logger.error(`Missing: ${missingDeps}`);
             return false;
           }
         } else {
-          console.log(chalk.red(`✗ Offline mode is enabled but dependencies are not in cache`));
+          logger.error(`Offline mode is enabled but dependencies are not in cache`);
           return false;
         }
       }
 
       // If network is partially available, warn but continue
       if (networkStatus === NetworkStatus.PARTIAL) {
-        console.log(chalk.yellow(`⚠ Network is partially available, installation may fail for some packages`));
-        console.log(chalk.yellow(`⚠ Use --offline flag to force offline mode with fallbacks`));
+        logger.warn(`Network is partially available, installation may fail for some packages`);
+        logger.warn(`Use --offline flag to force offline mode with fallbacks`);
       }
 
       // Install dependencies using package manager
-      console.log(chalk.cyan(`→ Installing dependencies using ${chalk.bold(this.options.packageManager)}...`));
+      logger.info(`Installing dependencies using ${this.options.packageManager}...`);
 
       const installTimer = createTimer();
       let success = false;
@@ -968,9 +968,9 @@ await cache.init();
 
       // Run post-install hooks
       if (!this.options.fastMode) {
-        console.log('\n🔌 Running POST_INSTALL hooks...');
-        await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
-        console.log('🔌 Finished running POST_INSTALL hooks');
+      console.log('\n🔌 Running POST_INSTALL hooks...');
+      await pluginManager.runHook(PluginHook.POST_INSTALL, pluginContext);
+      console.log('🔌 Finished running POST_INSTALL hooks');
       }
 
       // Log total time
@@ -1781,8 +1781,8 @@ await cache.init();
       // Start timer
       const totalTimer = createTimer();
       if (!this.options.fastMode) {
-        // Initialize plugin manager with the correct project directory
-        await pluginManager.init(projectDir);
+      // Initialize plugin manager with the correct project directory
+      await pluginManager.init(projectDir);
       }
       // Create plugin context
       const nodeModulesPath = path.join(projectDir, 'node_modules');
@@ -1794,10 +1794,10 @@ await cache.init();
         packages: packages
       };
       if (!this.options.fastMode) {
-        // Run pre-install hooks
-        console.log('\n🔌 Running PRE_INSTALL hooks...');
-        await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
-        console.log('🔌 Finished running PRE_INSTALL hooks');
+      // Run pre-install hooks
+      console.log('\n🔌 Running PRE_INSTALL hooks...');
+      await pluginManager.runHook(PluginHook.PRE_INSTALL, pluginContext);
+      console.log('🔌 Finished running PRE_INSTALL hooks');
       }
       // Install packages
       const success = await installPackages(projectDir, packages, this.options.packageManager, {

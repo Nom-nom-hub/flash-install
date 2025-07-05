@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { logger } from './logger.js';
+import { logger, format, isQuietMode } from './logger.js';
 
 /**
  * Progress indicator for terminal output
@@ -98,13 +98,12 @@ export class ProgressIndicator {
     }
 
     // Clear any previous output
-    process.stdout.write('\r\x1b[K');
+    if (!isQuietMode()) {
+      process.stdout.write('\r\x1b[K');
+    }
 
-    // Write completion message
-    process.stdout.write(`${chalk.green('✓')} ${this.message} completed in ${chalk.bold(elapsedText)}\n`);
-
-    // Add a blank line for better readability
-    process.stdout.write('\n');
+    // Write completion message using logger.success
+    logger.success(`${this.message} completed in ${format.bold(elapsedText)}`);
   }
 
   /**
@@ -140,25 +139,25 @@ export class ProgressIndicator {
     const incompleteWidth = barWidth - completeWidth;
 
     const bar =
-      chalk.cyan('█'.repeat(completeWidth)) +
-      chalk.gray('░'.repeat(incompleteWidth));
+      format.cyan('█'.repeat(completeWidth)) +
+      format.gray('░'.repeat(incompleteWidth));
 
     // Create status line
     const status = `${this.current}/${this.total} (${percent}%) - ETA: ${eta}`;
 
     // Get activity indicator
     this.activityIndicator = (this.activityIndicator + 1) % this.activitySymbols.length;
-    const activity = chalk.cyan(this.activitySymbols[this.activityIndicator]);
+    const activity = format.cyan(this.activitySymbols[this.activityIndicator]);
 
     // Format recent items
     let recentItemsText = '';
     if (this.recentItems.length > 0) {
-      recentItemsText = `\n  ${activity} Recent: ${this.recentItems.map(item => chalk.green(item)).join(', ')}`;
+      recentItemsText = `\n  ${activity} Recent: ${this.recentItems.map(item => format.green(item)).join(', ')}`;
     }
 
     // Format speed (with safety checks to avoid NaN or Infinity)
     const speed = this.current > 0 ? Math.max(0, Math.min(1000, this.current / elapsed)).toFixed(1) : '0.0';
-    const speedText = `\n  ${chalk.cyan('⚡')} Speed: ${chalk.yellow(speed)} packages/sec`;
+    const speedText = `\n  ${format.flash('Speed:')} ${format.yellow(speed)} packages/sec`;
 
     // Format elapsed time
     let elapsedText = '';
@@ -169,15 +168,18 @@ export class ProgressIndicator {
       const seconds = Math.floor(elapsed % 60);
       elapsedText = `${minutes}m ${seconds}s`;
     }
-    const timeText = `\n  ${chalk.cyan('⏱')} Elapsed: ${chalk.yellow(elapsedText)}`;
+    const timeText = `\n  ${format.cyan('⏱')} Elapsed: ${format.yellow(elapsedText)}`;
 
-    // Clear lines and render
-    process.stdout.write('\r\x1b[K');  // Clear current line
-    process.stdout.write(`${this.message} ${bar} ${status}${recentItemsText}${speedText}${timeText}`);
+    // Only render if not in quiet mode
+    if (!isQuietMode()) {
+      // Clear lines and render
+      process.stdout.write('\r\x1b[K');  // Clear current line
+      process.stdout.write(`${this.message} ${bar} ${status}${recentItemsText}${speedText}${timeText}`);
 
-    // Move cursor back to the first line
-    if (recentItemsText || speedText || timeText) {
-      process.stdout.write('\x1b[2A');  // Move cursor up 2 lines
+      // Move cursor back to the first line
+      if (recentItemsText || speedText || timeText) {
+        process.stdout.write('\x1b[2A');  // Move cursor up 2 lines
+      }
     }
   }
 }
@@ -225,7 +227,7 @@ export class Spinner {
       process.stdout.write('\r\x1b[K');
 
       // Write new output
-      process.stdout.write(`${chalk.cyan(frame)} ${this.message} ${chalk.gray(`(${elapsed}s)`)}${detailsText}`);
+      process.stdout.write(`${format.cyan(frame)} ${this.message} ${format.gray(`(${elapsed}s)`)}${detailsText}`);
 
       // Move cursor back to the first line if we have details
       if (detailsText) {

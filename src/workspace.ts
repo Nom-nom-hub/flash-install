@@ -106,7 +106,8 @@ export class WorkspaceManager {
       if (await fsUtils.fileExists(pnpmWorkspacePath)) {
         try {
           const yaml = await fs.readFile(pnpmWorkspacePath, 'utf8');
-          const workspaceData = require('js-yaml').load(yaml);
+          const jsYaml = await import('js-yaml');
+          const workspaceData = jsYaml.load(yaml) as any;
 
           if (workspaceData && workspaceData.packages) {
             this.config.enabled = true;

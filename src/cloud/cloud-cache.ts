@@ -770,7 +770,7 @@ export class CloudCache {
 
     try {
       // Create dependency tree path
-      const treePath = this.getDependencyTreePath(dependencies);
+      const treePath = await this.getDependencyTreePath(dependencies);
 
       // Check if lockfile has changed and we need to invalidate the cache
       let shouldInvalidate = false;
@@ -883,7 +883,7 @@ export class CloudCache {
       progress.start();
 
       // Create dependency tree path
-      const treePath = this.getDependencyTreePath(dependencies);
+      const treePath = await this.getDependencyTreePath(dependencies);
 
       // Create temporary tarball
       const tempDir = path.join(os.tmpdir(), `flash-install-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
@@ -936,7 +936,7 @@ export class CloudCache {
       progress.start();
 
       // Create dependency tree path
-      const treePath = this.getDependencyTreePath(dependencies);
+      const treePath = await this.getDependencyTreePath(dependencies);
 
       // Create temporary directory
       const tempDir = path.join(os.tmpdir(), `flash-install-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
@@ -1017,12 +1017,12 @@ export class CloudCache {
    * Get the dependency tree path in the cloud cache
    * @param dependencies Dependency tree
    */
-  private getDependencyTreePath(dependencies: Record<string, string>): string {
+  private async getDependencyTreePath(dependencies: Record<string, string>): Promise<string> {
     // Create team prefix if available
     const teamPrefix = this.config?.teamId ? `teams/${this.config.teamId}/` : '';
 
     // Hash the dependency tree
-    const hash = this.hashDependencyTree(dependencies);
+    const hash = await this.hashDependencyTree(dependencies);
 
     // Create tree path
     return `${teamPrefix}trees/${hash.substring(0, 2)}/${hash}.tgz`;
@@ -1032,7 +1032,7 @@ export class CloudCache {
    * Hash a dependency tree
    * @param dependencies Dependency tree
    */
-  private hashDependencyTree(dependencies: Record<string, string>): string {
+  private async hashDependencyTree(dependencies: Record<string, string>): Promise<string> {
     // Sort dependencies by name
     const sortedDeps = Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b));
 
@@ -1040,7 +1040,7 @@ export class CloudCache {
     const depString = sortedDeps.map(([name, version]) => `${name}@${version}`).join(',');
 
     // Create hash
-    const crypto = require('crypto');
+    const crypto = await import('crypto');
     return crypto.createHash('sha256').update(depString).digest('hex');
   }
 

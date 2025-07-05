@@ -388,16 +388,16 @@ export async function createTarball(sourceDir: string, outputFile: string, optio
     // Use tar command for better performance
     return new Promise<void>((resolve, reject) => {
       fs.ensureDirSync(path.dirname(outputFile));
-      const cmd = `tar -czf "${outputFile}" -C "${path.dirname(sourceDir)}" "${path.basename(sourceDir)}"`;
-      exec(cmd, (error) => {
-        if (error) {
-          logger.error(`Failed to create tarball: ${error}`);
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
+    const cmd = `tar -czf "${outputFile}" -C "${path.dirname(sourceDir)}" "${path.basename(sourceDir)}"`;
+    exec(cmd, (error) => {
+      if (error) {
+        logger.error(`Failed to create tarball: ${error}`);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
+  });
   } else {
     // TODO: Add JS fallback extraction logic here
     throw new Error('JS fallback for createTarball not implemented');
@@ -416,16 +416,16 @@ export async function extractTarball(tarballFile: string, outputDir: string, opt
     // Use tar command for better performance
     return new Promise<void>((resolve, reject) => {
       fs.ensureDirSync(outputDir);
-      const cmd = `tar -xzf "${tarballFile}" -C "${outputDir}"`;
-      exec(cmd, (error) => {
-        if (error) {
-          logger.error(`Failed to extract tarball: ${error}`);
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
+    const cmd = `tar -xzf "${tarballFile}" -C "${outputDir}"`;
+    exec(cmd, (error) => {
+      if (error) {
+        logger.error(`Failed to extract tarball: ${error}`);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
+  });
   } else {
     // TODO: Add JS fallback extraction logic here
     throw new Error('JS fallback for extractTarball not implemented');

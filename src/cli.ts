@@ -7,7 +7,7 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { execSync } from 'child_process';
-import { logger } from './utils/logger.js';
+import { logger, setQuietMode, format, logTable } from './utils/logger.js';
 import { installer, PackageManager, Installer } from './install.js';
 import { snapshot, SnapshotFormat, Snapshot } from './snapshot.js';
 import { cache } from './cache.js';
@@ -97,8 +97,18 @@ program
   .option('--team-access-level <level>', 'Team access level (read, write, admin)', 'read')
   .option('--team-restrict', 'Restrict access to team members only', false)
   .option('--lightweight-analysis', 'Enable lightweight dependency analysis for faster installs on small projects', false)
+  .option('--quiet', 'Reduce output verbosity', false)
   .action(async (packages: any, options: any, command: any) => {
     try {
+      // Set global quiet mode
+      setQuietMode(options.quiet || false);
+      
+      if (!options.quiet && packages.length > 0) {
+        logger.flash('');
+        logger.flash(`⚡ flash-install v${version}`);
+        logger.flash(`Installing: ${packages.join(', ')}`);
+      }
+      
       const projectDir = process.cwd();
       // If user typed 'install' as the first argument, treat it as default install
       if (packages && packages[0] === 'install') {
@@ -118,12 +128,6 @@ program
 
       // If specific packages are provided, install them
       if (packages && packages.length > 0) {
-        console.log(chalk.cyan(`
-⚡ flash-install v${version}
-        `));
-
-        console.log(chalk.cyan(`⚡ Installing packages: ${packages.join(', ')}`));
-
         // Configure workspace options
         const workspaceOptions = options.workspace ? {
           enabled: true,
@@ -146,7 +150,7 @@ program
         let cloudCacheConfig: CloudCacheConfig | undefined;
         if (options.cloudCache) {
           if (!options.cloudBucket) {
-            console.log(chalk.yellow('⚠ Cloud cache enabled but no bucket specified. Use --cloud-bucket to specify a bucket.'));
+            logger.warn(format.warn('Cloud cache enabled but no bucket specified.') + ' Use --cloud-bucket to specify a bucket.');
           } else {
             // Map sync policy string to enum
             let syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
@@ -187,7 +191,7 @@ program
               } : undefined
             };
 
-            console.log(chalk.cyan(`→ Cloud cache enabled with ${options.cloudProvider} provider`));
+            logger.flash(`→ Cloud cache enabled with ${options.cloudProvider} provider`);
           }
         }
 
@@ -241,7 +245,7 @@ program
         let cloudCacheConfig: CloudCacheConfig | undefined;
         if (options.cloudCache) {
           if (!options.cloudBucket) {
-            console.log(chalk.yellow('⚠ Cloud cache enabled but no bucket specified. Use --cloud-bucket to specify a bucket.'));
+            logger.warn(format.warn('Cloud cache enabled but no bucket specified.') + ' Use --cloud-bucket to specify a bucket.');
           } else {
             // Map sync policy string to enum
             let syncPolicy = SyncPolicy.UPLOAD_IF_MISSING;
@@ -282,7 +286,7 @@ program
               } : undefined
             };
 
-            console.log(chalk.cyan(`→ Cloud cache enabled with ${options.cloudProvider} provider`));
+            logger.flash(`→ Cloud cache enabled with ${options.cloudProvider} provider`);
           }
         }
 
@@ -308,7 +312,7 @@ program
         process.exit(success ? 0 : 1);
       }
     } catch (error) {
-      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -328,50 +332,50 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
     // Check if package.json exists
     const packageJsonPath = path.join(projectDir, 'package.json');
     if (!await fsUtils.fileExists(packageJsonPath)) {
-      logger.error(`package.json not found in ${projectDir}`);
+      logger.error(format.error(`package.json not found in ${projectDir}`) + ' Please check the file path and try again.');
       process.exit(1);
     }
 
     // Check if node_modules exists
     const nodeModulesPath = path.join(projectDir, 'node_modules');
     if (!await fsUtils.directoryExists(nodeModulesPath)) {
-      logger.error(`node_modules not found in ${projectDir}`);
+      logger.error(format.error(`node_modules not found in ${projectDir}`) + ' Please check the directory path and try again.');
       process.exit(1);
     }
 
     // Configure snapshot
-    let format: SnapshotFormat;
+    let snapshotFormat: SnapshotFormat;
     switch (options.format.toLowerCase()) {
       case 'zip':
-        format = SnapshotFormat.ZIP;
+        snapshotFormat = SnapshotFormat.ZIP;
         break;
       case 'tar':
-        format = SnapshotFormat.TAR;
+        snapshotFormat = SnapshotFormat.TAR;
         break;
       case 'tar.gz':
       case 'tgz':
-        format = SnapshotFormat.TAR_GZ;
+        snapshotFormat = SnapshotFormat.TAR_GZ;
         break;
       default:
-        logger.error(`Unsupported snapshot format: ${options.format}`);
+        logger.error(format.error(`Unsupported snapshot format: ${options.format}`) + ' Please check the format and try again.');
         process.exit(1);
     }
 
     const compressionLevel = parseInt(options.compression, 10);
     if (isNaN(compressionLevel) || compressionLevel < 0 || compressionLevel > 9) {
-      logger.error('Compression level must be between 0 and 9');
+      logger.error(format.error('Compression level must be between 0 and 9') + ' Please check the compression level and try again.');
       process.exit(1);
     }
 
     const customSnapshot = new Snapshot({
-      format,
+      format: snapshotFormat,
       compressionLevel
     });
 
@@ -390,7 +394,7 @@ program
         process.exit(1);
       }
     } catch (error) {
-      logger.error(`Failed to create snapshot: ${error}`);
+      logger.error(format.error(`Failed to create snapshot: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -407,14 +411,14 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
     // Check if package.json exists
     const packageJsonPath = path.join(projectDir, 'package.json');
     if (!await fsUtils.fileExists(packageJsonPath)) {
-      logger.error(`package.json not found in ${projectDir}`);
+      logger.error(format.error(`package.json not found in ${projectDir}`) + ' Please check the file path and try again.');
       process.exit(1);
     }
 
@@ -463,7 +467,7 @@ program
     if (!options.global || options.all) {
       // Check if directory exists
       if (!await fsUtils.directoryExists(projectDir)) {
-        logger.error(`Directory not found: ${projectDir}`);
+        logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
         process.exit(1);
       }
 
@@ -488,7 +492,7 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
@@ -506,7 +510,7 @@ program
         logger.info(`No node_modules directory found in ${chalk.bold(projectDir)}`);
       }
     } catch (error) {
-      logger.error(`Failed to clean node_modules: ${error}`);
+      logger.error(format.error(`Failed to clean node_modules: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -522,7 +526,7 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
@@ -540,7 +544,7 @@ program
         logger.info(`No snapshot file found in ${chalk.bold(projectDir)}`);
       }
     } catch (error) {
-      logger.error(`Failed to clean snapshot: ${error}`);
+      logger.error(format.error(`Failed to clean snapshot: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -557,28 +561,28 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
     // Check if package.json exists
     const packageJsonPath = path.join(projectDir, 'package.json');
     if (!await fsUtils.fileExists(packageJsonPath)) {
-      logger.error(`package.json not found in ${projectDir}`);
+      logger.error(format.error(`package.json not found in ${projectDir}`) + ' Please check the file path and try again.');
       process.exit(1);
     }
 
     // Start interactive mode
-    console.log(chalk.cyan(`
+    logger.flash(`
 ⚡ flash-install v${version} - Interactive Mode
-    `));
+    `);
 
-    console.log(chalk.cyan(`Starting interactive mode for ${chalk.bold(projectDir)}`));
+    logger.flash(`Starting interactive mode for ${chalk.bold(projectDir)}`);
 
     // Check if interactive mode is disabled
     const options = program.opts();
     if (options.interactive === false) {
-      console.log(chalk.yellow('Interactive mode is disabled. Use --interactive to enable it.'));
+      logger.warn('Interactive mode is disabled. Use --interactive to enable it.');
       process.exit(0);
     }
 
@@ -601,21 +605,21 @@ program
 
         // Check if directory exists
         if (!await fsUtils.directoryExists(projectDir)) {
-          logger.error(`Directory not found: ${projectDir}`);
+          logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
           process.exit(1);
         }
 
         // Check if package.json exists
         const packageJsonPath = path.join(projectDir, 'package.json');
         if (!await fsUtils.fileExists(packageJsonPath)) {
-          logger.error(`package.json not found in ${projectDir}`);
+          logger.error(format.error(`package.json not found in ${projectDir}`) + ' Please check the file path and try again.');
           process.exit(1);
         }
 
         // Validate package manager
         const validManagers = ['npm', 'yarn', 'pnpm', 'bun'];
         if (!validManagers.includes(manager)) {
-          logger.error(`Invalid package manager: ${manager}`);
+          logger.error(format.error(`Invalid package manager: ${manager}`) + ' Please check the package manager and try again.');
           logger.info(`Valid package managers: ${validManagers.join(', ')}`);
           process.exit(1);
         }
@@ -624,7 +628,7 @@ program
         try {
           execSync(`${manager} --version`, { stdio: 'ignore' });
         } catch (error) {
-          logger.error(`Package manager ${chalk.bold(manager)} is not installed.`);
+          logger.error(format.error(`Package manager ${chalk.bold(manager)} is not installed.`) + ' Please install the package manager and try again.');
           process.exit(1);
         }
 
@@ -675,7 +679,7 @@ program
 
           logger.success(`Updated package.json with packageManager field`);
         } catch (error) {
-          logger.error(`Failed to update package.json: ${error}`);
+          logger.error(format.error(`Failed to update package.json: ${error}`) + ' Please check the error message and try again.');
           process.exit(1);
         }
 
@@ -692,7 +696,7 @@ program
 
         // Check if directory exists
         if (!await fsUtils.directoryExists(projectDir)) {
-          logger.error(`Directory not found: ${projectDir}`);
+          logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
           process.exit(1);
         }
 
@@ -707,31 +711,31 @@ program
           PackageManager.BUN
         ];
 
-        console.log(chalk.cyan(`
+        logger.flash(`
 ⚡ flash-install Package Manager Info
-        `));
+        `);
 
-        console.log(chalk.cyan(`Project directory: ${chalk.bold(projectDir)}`));
+        logger.flash(`Project directory: ${chalk.bold(projectDir)}`);
 
         // Detect current package manager
         const currentPackageManager = customInstaller.detectPackageManager(projectDir);
-        console.log(chalk.cyan(`Current package manager: ${chalk.bold(currentPackageManager)}`));
+        logger.flash(`Current package manager: ${chalk.bold(currentPackageManager)}`);
 
-        console.log('\nAvailable package managers:');
+        logger.info('\nAvailable package managers:');
 
         for (const pm of packageManagers) {
           const isInstalled = customInstaller.isPackageManagerInstalled(pm);
           const version = customInstaller.getPackageManagerVersion(pm);
 
           if (isInstalled) {
-            console.log(`${chalk.green('✓')} ${chalk.bold(pm)}${version ? ` v${version}` : ''}`);
+            logger.info(`${chalk.green('✓')} ${chalk.bold(pm)}${version ? ` v${version}` : ''}`);
           } else {
-            console.log(`${chalk.red('✗')} ${chalk.bold(pm)} (not installed)`);
+            logger.info(`${chalk.red('✗')} ${chalk.bold(pm)} (not installed)`);
           }
         }
 
-        console.log('\nTo change package manager:');
-        console.log(`  ${chalk.cyan('flash-install pm use <manager>')}`);
+        logger.info('\nTo change package manager:');
+        logger.info(`  ${chalk.cyan('flash-install pm use <manager>')}`);
       })
   );
 
@@ -749,21 +753,21 @@ program
 
     // Check if directory exists
     if (!await fsUtils.directoryExists(projectDir)) {
-      logger.error(`Directory not found: ${projectDir}`);
+      logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
       process.exit(1);
     }
 
     // Check if package.json exists
     const packageJsonPath = path.join(projectDir, 'package.json');
     if (!await fsUtils.fileExists(packageJsonPath)) {
-      logger.error(`package.json not found in ${projectDir}`);
+      logger.error(format.error(`package.json not found in ${projectDir}`) + ' Please check the file path and try again.');
       process.exit(1);
     }
 
     // Print banner
-    console.log(chalk.cyan(`
+    logger.flash(`
 ⚡ flash-install sync v${version}
-    `));
+    `);
 
     // Configure sync
     const syncOptions = {
@@ -800,18 +804,18 @@ program
   .option('--team-restrict', 'Restrict access to team members only', false)
   .action(async (options: any) => {
     try {
-      console.log(chalk.cyan(`
+      logger.flash(`
 ⚡ flash-install cloud-sync v${version}
-      `));
+      `);
 
       if (!options.cloudBucket) {
-        console.log(chalk.red('Error: Cloud bucket is required. Use --cloud-bucket to specify a bucket.'));
+        logger.error(format.error('Error: Cloud bucket is required. Use --cloud-bucket to specify a bucket.') + ' Please check the bucket name and try again.');
         process.exit(1);
       }
 
       // Validate direction
       if (!['upload', 'download', 'both'].includes(options.direction)) {
-        console.log(chalk.red(`Error: Invalid direction: ${options.direction}. Must be one of: upload, download, both.`));
+        logger.error(format.error(`Error: Invalid direction: ${options.direction}. Must be one of: upload, download, both.`) + ' Please check the direction and try again.');
         process.exit(1);
       }
 
@@ -842,17 +846,17 @@ program
       await cloudCache.init(cloudCacheConfig);
 
       // Sync cache
-      console.log(chalk.cyan(`→ Synchronizing cache with ${options.cloudProvider} (${options.direction})`));
+      logger.flash(`→ Synchronizing cache with ${options.cloudProvider} (${options.direction})`);
       const success = await cloudCache.syncCache(options.direction as 'upload' | 'download' | 'both', options.force);
 
       if (!success) {
-        console.log(chalk.red('Error: Failed to synchronize cache with cloud.'));
+        logger.error('Error: Failed to synchronize cache with cloud.');
         process.exit(1);
       }
 
-      console.log(chalk.green('✓ Cache synchronized successfully with cloud.'));
+      logger.success('✓ Cache synchronized successfully with cloud.');
     } catch (error) {
-      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -876,24 +880,24 @@ const cacheCommand = program
 
     const stats = await cache.getStats();
 
-    console.log(chalk.cyan('\n⚡ Flash Install Cache Information\n'));
-    console.log(`Total entries: ${stats.entries}`);
-    console.log(`Packages: ${stats.packages}`);
-    console.log(`Dependency trees: ${stats.trees}`);
-    console.log(`Total size: ${fsUtils.formatSize(stats.size)}`);
+    logger.flash('\n⚡ Flash Install Cache Information\n');
+    logger.info(`Total entries: ${stats.entries}`);
+    logger.info(`Packages: ${stats.packages}`);
+    logger.info(`Dependency trees: ${stats.trees}`);
+    logger.info(`Total size: ${fsUtils.formatSize(stats.size)}`);
 
     if (stats.oldestEntry) {
       const oldestDate = new Date(stats.oldestEntry);
-      console.log(`Oldest entry: ${oldestDate.toLocaleDateString()}`);
+      logger.info(`Oldest entry: ${oldestDate.toLocaleDateString()}`);
     }
 
     if (stats.newestEntry) {
       const newestDate = new Date(stats.newestEntry);
-      console.log(`Newest entry: ${newestDate.toLocaleDateString()}`);
+      logger.info(`Newest entry: ${newestDate.toLocaleDateString()}`);
     }
 
-    console.log(`Average entry size: ${fsUtils.formatSize(stats.avgSize)}`);
-    console.log(`Cache location: ${cache.cacheDir}`);
+    logger.info(`Average entry size: ${fsUtils.formatSize(stats.avgSize)}`);
+    logger.info(`Cache location: ${cache.cacheDir}`);
   });
 
 // Cloud cache commands
@@ -961,7 +965,7 @@ cacheCommand
 
       // Validate config
       if (enabled && !cloudConfig.provider.bucket) {
-        logger.error('Bucket name is required for cloud cache');
+        logger.error(format.error('Bucket name is required for cloud cache') + ' Please check the bucket name and try again.');
         process.exit(1);
       }
 
@@ -1006,7 +1010,7 @@ cacheCommand
             logger.success('Cloud cache test completed successfully');
           }
         } catch (error) {
-          logger.error(`Failed to initialize cloud cache: ${error}`);
+          logger.error(format.error(`Failed to initialize cloud cache: ${error}`) + ' Please check the error message and try again.');
           process.exit(1);
         }
       } else {
@@ -1017,7 +1021,7 @@ cacheCommand
       await cache.saveConfig();
 
     } catch (error) {
-      logger.error(`Failed to configure cloud cache: ${error}`);
+      logger.error(format.error(`Failed to configure cloud cache: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1042,7 +1046,7 @@ cacheCommand
       await cloudCache.init(cache.getOptions().cloud!);
 
       // Create progress indicator
-      const progress = new CloudProgress('Synchronizing with cloud cache');
+      const progress = new CloudProgress(format.flash('Synchronizing with cloud cache'));
       progress.start();
 
       // Get all cache entries
@@ -1069,7 +1073,7 @@ cacheCommand
 
       // Synchronize packages
       if (options.direction === 'upload' || options.direction === 'both') {
-        progress.updateStatus(`Uploading ${packages.length} packages to cloud cache...`);
+        progress.updateStatus(format.flash(`Uploading ${packages.length} packages to cloud cache...`));
 
         let uploaded = 0;
         for (const [name, version] of packages) {
@@ -1077,36 +1081,36 @@ cacheCommand
             const packagePath = cache.getPackagePath(name, version);
             await cloudCache.syncPackage(name, version, packagePath);
             uploaded++;
-            progress.updateStatus(`Uploaded ${uploaded}/${packages.length} packages`);
+            progress.updateStatus(format.flash(`Uploaded ${uploaded}/${packages.length} packages`));
           } catch (error) {
-            logger.warn(`Failed to upload package ${name}@${version}: ${error}`);
+            logger.warn(format.warn(`Failed to upload package ${name}@${version}: ${error}`) + ' Please check the error message and try again.');
           }
         }
 
-        logger.success(`Uploaded ${uploaded}/${packages.length} packages to cloud cache`);
+        logger.success(format.flash(`Uploaded ${uploaded}/${packages.length} packages to cloud cache`));
       }
 
       // Synchronize dependency trees
       if (options.direction === 'upload' || options.direction === 'both') {
-        progress.updateStatus(`Uploading ${trees.length} dependency trees to cloud cache...`);
+        progress.updateStatus(format.flash(`Uploading ${trees.length} dependency trees to cloud cache...`));
 
         let uploaded = 0;
         for (const [dependencies, treePath] of trees) {
           try {
             await cloudCache.syncDependencyTree(dependencies, treePath);
             uploaded++;
-            progress.updateStatus(`Uploaded ${uploaded}/${trees.length} dependency trees`);
+            progress.updateStatus(format.flash(`Uploaded ${uploaded}/${trees.length} dependency trees`));
           } catch (error) {
-            logger.warn(`Failed to upload dependency tree: ${error}`);
+            logger.warn(format.warn(`Failed to upload dependency tree: ${error}`) + ' Please check the error message and try again.');
           }
         }
 
-        logger.success(`Uploaded ${uploaded}/${trees.length} dependency trees to cloud cache`);
+        logger.success(format.flash(`Uploaded ${uploaded}/${trees.length} dependency trees to cloud cache`));
       }
 
       // Download from cloud cache
       if (options.direction === 'download' || options.direction === 'both') {
-        progress.updateStatus('Downloading from cloud cache...');
+        progress.updateStatus(format.flash('Downloading from cloud cache...'));
 
         // List files in cloud cache
         const cloudFiles = await cloudCache.getProvider().listFiles();
@@ -1115,17 +1119,17 @@ cacheCommand
         const packageFiles = cloudFiles.filter(file => file.startsWith('packages/'));
         const treeFiles = cloudFiles.filter(file => file.startsWith('trees/'));
 
-        logger.info(`Found ${packageFiles.length} packages and ${treeFiles.length} dependency trees in cloud cache`);
+        logger.info(format.flash(`Found ${packageFiles.length} packages and ${treeFiles.length} dependency trees in cloud cache`));
 
         // TODO: Implement download logic
 
-        logger.success('Downloaded cache entries from cloud cache');
+        logger.success(format.flash('Downloaded cache entries from cloud cache'));
       }
 
       progress.stop();
 
     } catch (error) {
-      logger.error(`Failed to synchronize with cloud cache: ${error}`);
+      logger.error(format.error(`Failed to synchronize with cloud cache: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1139,10 +1143,10 @@ program
   .option('--retries <number>', 'Number of retries for network operations', '2')
   .action(async (options: any) => {
     try {
-      console.log(chalk.cyan(`\n⚡ Flash Install Network Check\n`));
+      logger.flash(`\n⚡ Flash Install Network Check\n`);
 
       // Create spinner
-      const spinner = new Spinner('Checking network status');
+      const spinner = new Spinner(format.flash('Checking network status'));
       spinner.start();
 
       // Check network
@@ -1156,43 +1160,43 @@ program
       spinner.stop();
 
       // Display results
-      console.log(chalk.bold(`Network Status: ${getNetworkStatusColor(result.status)}`));
-      console.log(`DNS Resolution: ${result.dnsAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
-      console.log(`Registry: ${result.registryAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
-      console.log(`Internet: ${result.internetAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+      logger.info(`Network Status: ${getNetworkStatusColor(result.status)}`);
+      logger.info(`DNS Resolution: ${result.dnsAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+      logger.info(`Registry: ${result.registryAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
+      logger.info(`Internet: ${result.internetAvailable ? chalk.green('Available') : chalk.red('Unavailable')}`);
 
       if (result.responseTime) {
-        console.log(`Response Time: ${Math.round(result.responseTime)}ms`);
+        logger.info(`Response Time: ${Math.round(result.responseTime)}ms`);
       }
 
       if (result.error) {
-        console.log(chalk.red(`Error: ${result.error}`));
+        logger.error(format.error(`Error: ${result.error}`) + ' Please check the error message and try again.');
       }
 
       // Provide recommendations
-      console.log('\nRecommendations:');
+      logger.info('\nRecommendations:');
 
       if (result.status === NetworkStatus.ONLINE) {
-        console.log(chalk.green('✓ Network is fully available, all features should work normally'));
+        logger.info(chalk.green('✓ Network is fully available, all features should work normally'));
       } else if (result.status === NetworkStatus.OFFLINE) {
-        console.log(chalk.yellow('⚠ Network is offline, use the following options:'));
-        console.log(chalk.yellow('  - Use --offline flag to enable offline mode'));
-        console.log(chalk.yellow('  - Ensure you have a cache or snapshot available'));
+        logger.info(chalk.yellow('⚠ Network is offline, use the following options:'));
+        logger.info(chalk.yellow('  - Use --offline flag to enable offline mode'));
+        logger.info(chalk.yellow('  - Ensure you have a cache or snapshot available'));
       } else if (result.status === NetworkStatus.PARTIAL) {
-        console.log(chalk.yellow('⚠ Network is partially available, use the following options:'));
+        logger.info(chalk.yellow('⚠ Network is partially available, use the following options:'));
 
         if (!result.registryAvailable) {
-          console.log(chalk.yellow('  - Use --offline flag to enable offline mode with fallbacks'));
-          console.log(chalk.yellow('  - Try a different registry with --registry <url>'));
+          logger.info(chalk.yellow('  - Use --offline flag to enable offline mode with fallbacks'));
+          logger.info(chalk.yellow('  - Try a different registry with --registry <url>'));
         }
 
         if (!result.dnsAvailable) {
-          console.log(chalk.yellow('  - Check your DNS settings'));
-          console.log(chalk.yellow('  - Try using a specific IP address for the registry'));
+          logger.info(chalk.yellow('  - Check your DNS settings'));
+          logger.info(chalk.yellow('  - Try using a specific IP address for the registry'));
         }
       }
     } catch (error) {
-      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1226,14 +1230,14 @@ program
 
       // Check if directory exists
       if (!await fsUtils.directoryExists(projectDir)) {
-        logger.error(`Directory not found: ${projectDir}`);
+        logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
         process.exit(1);
       }
 
-      console.log(chalk.cyan(`\n⚡ Flash Install Dependency Analysis\n`));
+      logger.flash(`\n⚡ Flash Install Dependency Analysis\n`);
 
       // Create spinner
-      const spinner = new Spinner('Analyzing dependencies');
+      const spinner = new Spinner(format.flash('Analyzing dependencies'));
       spinner.start();
 
       // Analyze dependencies
@@ -1243,39 +1247,39 @@ program
       spinner.stop();
 
       // Display results
-      console.log(chalk.bold(`Dependency Statistics:`));
-      console.log(`Total dependencies: ${result.dependencyCount}`);
-      console.log(`Unique packages: ${result.uniquePackages}`);
+      logger.info(chalk.bold(`Dependency Statistics:`));
+      logger.info(`Total dependencies: ${result.dependencyCount}`);
+      logger.info(`Unique packages: ${result.uniquePackages}`);
 
       if (result.duplicatePackages > 0) {
-        console.log(`Duplicate packages: ${result.duplicatePackages}`);
+        logger.info(`Duplicate packages: ${result.duplicatePackages}`);
       }
 
-      console.log(`Total size: ${fsUtils.formatSize(result.totalSize)}`);
+      logger.info(`Total size: ${fsUtils.formatSize(result.totalSize)}`);
 
       // Show largest dependencies
       if (result.largestDependencies.length > 0) {
-        console.log(chalk.bold(`\nLargest Dependencies:`));
+        logger.info(chalk.bold(`\nLargest Dependencies:`));
 
         for (const dep of result.largestDependencies) {
           if (dep.size !== undefined) {
-            console.log(`${dep.name}@${dep.version}: ${fsUtils.formatSize(dep.size)}`);
+            logger.info(`${dep.name}@${dep.version}: ${fsUtils.formatSize(dep.size)}`);
           }
         }
       }
 
       // Show most duplicated dependencies
       if (result.mostDuplicated.length > 0) {
-        console.log(chalk.bold(`\nMost Duplicated Dependencies:`));
+        logger.info(chalk.bold(`\nMost Duplicated Dependencies:`));
 
         for (const dep of result.mostDuplicated) {
-          console.log(`${dep.name}: ${dep.count} instances`);
+          logger.info(`${dep.name}: ${dep.count} instances`);
         }
       }
 
-      console.log(chalk.cyan(`\nUse 'flash-install analyze --help' for more options`));
+      logger.info(chalk.cyan(`\nUse 'flash-install analyze --help' for more options`));
     } catch (error) {
-      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1312,14 +1316,14 @@ program
 
       // Check if directory exists
       if (!await fsUtils.directoryExists(projectDir)) {
-        logger.error(`Directory not found: ${projectDir}`);
+        logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
         process.exit(1);
       }
 
-      console.log(chalk.cyan(`\n⚡ Flash Install Dependency Visualization\n`));
+      logger.flash(`\n⚡ Flash Install Dependency Visualization\n`);
 
       // Create spinner
-      const spinner = new Spinner('Analyzing dependencies');
+      const spinner = new Spinner(format.flash('Analyzing dependencies'));
       spinner.start();
 
       // Analyze dependencies
@@ -1349,7 +1353,7 @@ program
           output = generateDependencyReport(result.dependencies, visualizationOptions);
           break;
         default:
-          logger.error(`Unsupported format: ${options.format}`);
+          logger.error(format.error(`Unsupported format: ${options.format}`) + ' Please check the format and try again.');
           process.exit(1);
       }
 
@@ -1358,13 +1362,13 @@ program
         // Write to file
         const outputPath = path.resolve(options.output);
         await fs.writeFile(outputPath, output);
-        console.log(chalk.green(`Dependency visualization saved to ${outputPath}`));
+        logger.success(format.flash(`Dependency visualization saved to ${outputPath}`));
       } else {
         // Print to console
-        console.log(output);
+        logger.info(output);
       }
     } catch (error) {
-      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1381,7 +1385,7 @@ program
 
       // Check if directory exists
       if (!await fsUtils.directoryExists(projectDir)) {
-        logger.error(`Directory not found: ${projectDir}`);
+        logger.error(format.error(`Directory not found: ${projectDir}`) + ' Please check the path and try again.');
         process.exit(1);
       }
 
@@ -1396,43 +1400,39 @@ program
       // Get workspace packages
       const packages = workspaceManager.getPackages();
 
-      console.log(chalk.cyan(`\n⚡ Flash Install Workspaces\n`));
-      console.log(chalk.cyan(`Found ${chalk.bold(packages.length.toString())} workspace packages:\n`));
+      logger.flash(`Flash Install Workspaces`);
+      logger.info(`Found ${packages.length} workspace packages:`);
 
       // Get dependency graph
       const graph = workspaceManager.buildDependencyGraph();
 
-      // Display packages
-      for (const pkg of packages) {
-        console.log(chalk.bold(`${pkg.name}@${pkg.version}`));
-        console.log(chalk.gray(`  Location: ${path.relative(projectDir, pkg.directory)}`));
-
-        // Show dependencies
+      // Prepare table data
+      const tableData = packages.map(pkg => {
         const deps = Object.keys(pkg.dependencies).filter(dep => workspaceManager.getPackage(dep));
-        if (deps.length > 0) {
-          console.log(chalk.gray(`  Workspace dependencies: ${deps.join(', ')}`));
-        }
-
-        // Show dependents
         const dependents: string[] = [];
         for (const [pkgName, dependencies] of graph.entries()) {
           if (dependencies.includes(pkg.name)) {
             dependents.push(pkgName);
           }
         }
+        return {
+          Name: pkg.name,
+          Version: pkg.version,
+          Location: path.relative(projectDir, pkg.directory),
+          Dependencies: deps.join(', '),
+          'Used By': dependents.join(', ')
+        };
+      });
 
-        if (dependents.length > 0) {
-          console.log(chalk.gray(`  Used by: ${dependents.join(', ')}`));
-        }
-
-        console.log('');
-      }
+      logTable(tableData, {
+        headers: ['Name', 'Version', 'Location', 'Dependencies', 'Used By']
+      });
 
       // Show installation order
       const installOrder = workspaceManager.getInstallationOrder();
-      console.log(chalk.cyan(`Installation order: ${installOrder.join(' → ')}`));
+      logger.info(`Installation order: ${installOrder.join(' → ')}`);
     } catch (error) {
-      logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(format.error(`Error: ${error instanceof Error ? error.message : String(error)}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1452,26 +1452,26 @@ program
   .option('--registry <url>', 'Specify npm registry URL')
   .action(async (packages: any, options: any) => {
     try {
-      console.log(chalk.cyan(`
+      logger.flash(`
 ⚡ flash-install v${version}
-        `));
+        `);
 
-      console.log(chalk.cyan(`⚡ Installing packages: ${packages.join(', ')}`));
-      console.log(`Install options: ${JSON.stringify({
+      logger.flash(`⚡ Installing packages: ${packages.join(', ')}`);
+      logger.info(`Install options: ${JSON.stringify({
         saveToDependencies: !options.saveDev,
         saveToDevDependencies: options.saveDev,
         saveExact: options.saveExact
       })}`);
 
       if (options.saveDev) {
-        console.log(`Will save to dependencies: false`);
-        console.log(`Will save to devDependencies: true`);
+        logger.info(`Will save to dependencies: false`);
+        logger.info(`Will save to devDependencies: true`);
       } else {
-        console.log(`Will save to dependencies: true`);
-        console.log(`Will save to devDependencies: undefined`);
+        logger.info(`Will save to dependencies: true`);
+        logger.info(`Will save to devDependencies: undefined`);
       }
 
-      console.log(`Will save exact version: ${options.saveExact ? 'true' : 'undefined'}`);
+      logger.info(`Will save exact version: ${options.saveExact ? 'true' : 'undefined'}`);
 
       // Configure installer
       const customInstaller = new Installer({
@@ -1496,7 +1496,7 @@ program
 
       process.exit(success ? 0 : 1);
     } catch (error) {
-      logger.error(`Failed to install packages: ${error}`);
+      logger.error(format.error(`Failed to install packages: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
@@ -1523,22 +1523,13 @@ program
 
       logger.success(`Package downloaded to: ${outputPath}`);
     } catch (error) {
-      logger.error(`Failed to download package: ${error}`);
+      logger.error(format.error(`Failed to download package: ${error}`) + ' Please check the error message and try again.');
       process.exit(1);
     }
   });
 
-// Add a hidden 'install' command as an alias for the default install
-program
-  .command('install [packages...]', { isDefault: false, hidden: true })
-  .description('(Alias) Install dependencies (same as default)')
-  .allowUnknownOption()
-  .action((packages: any, options: any, command: any) => {
-    // Re-run the default command logic, passing through arguments
-    // This triggers the default action above
-    const args = process.argv.slice(0, 2).concat(packages || []);
-    program.parse(args, { from: 'user' });
-  });
+// Note: The default command handles install functionality
+// No separate install command needed to avoid argument parsing conflicts
 
 // Parse command line arguments
 program.parse(process.argv);

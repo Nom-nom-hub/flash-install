@@ -596,30 +596,19 @@ export class PluginManager {
       await this.init();
     }
 
-    // Add debug logging
-    console.log(`\n🔍 Plugin Manager: Running hook '${hook}'`);
-    console.log(`🔍 Plugin Manager: Total plugins: ${this.plugins.length}`);
-
     // Filter out disabled plugins
     const enabledPlugins = this.plugins.filter(p => p.config?.enabled !== false);
-    console.log(`🔍 Plugin Manager: Enabled plugins: ${enabledPlugins.length}`);
 
     for (const plugin of enabledPlugins) {
-      console.log(`🔍 Plugin Manager: Checking plugin '${plugin.name}' for hook '${hook}'`);
       const hookFn = plugin.hooks[hook];
 
       if (hookFn) {
-        console.log(`🔍 Plugin Manager: Found hook '${hook}' in plugin '${plugin.name}'`);
         try {
           logger.debug(`Running ${hook} hook for ${plugin.name}`);
           await hookFn(context);
-          console.log(`🔍 Plugin Manager: Successfully ran hook '${hook}' for plugin '${plugin.name}'`);
         } catch (error) {
           logger.warn(`Plugin ${plugin.name} failed on ${hook} hook: ${error}`);
-          console.log(`🔍 Plugin Manager: Error running hook '${hook}' for plugin '${plugin.name}': ${error}`);
         }
-      } else {
-        console.log(`🔍 Plugin Manager: Hook '${hook}' not found in plugin '${plugin.name}'`);
       }
     }
   }
@@ -957,7 +946,7 @@ export class PluginManager {
         logger.info(`Installing plugin package: ${packageName}${versionSuffix}`);
 
         try {
-          const { execSync } = require('child_process');
+          const { execSync } = await import('child_process');
           execSync(command, { cwd: tempDir, stdio: 'inherit' });
         } catch (error) {
           logger.error(`Failed to install plugin package: ${error}`);
